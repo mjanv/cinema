@@ -1,0 +1,320 @@
+defmodule CinemaWeb.ShowtimesLive do
+  @moduledoc """
+  The whole app: every Grenoble showtime for the coming days, on one page.
+
+  Filtering happens client-side against the already-loaded schedule, so
+  switching day or version never round-trips to AlloCiné.
+  """
+
+  use CinemaWeb, :live_view
+
+  # The clock only needs to be right to the minute; ticking every 30s keeps it
+  # from lagging visibly after a minute rolls over.
+  @tick_ms 30_000
+
+  @impl true
+  def mount(_params, _session, socket) do
+    if connected?(socket), do: :timer.send_interval(@tick_ms, self(), :tick)
+
+    {:ok,
+     socket
+     |> assign(version: :all, group_by: :movie, loading: false)
+     |> assign_now()
+     |> load_days()}
+  end
+
+  @impl true
+  def handle_info(:tick, socket), do: {:noreply, assign_now(socket)}
+
+  # Screenings carry naive local times, so keep a naive copy to compare against.
+  defp assign_now(socket) do
+    now = Cinema.now()
+    assign(socket, now: now, now_naive: DateTime.to_naive(now))
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    date = selected_date(params, socket.assigns.days, socket.assigns.now_naive)
+    {:noreply, assign(socket, selected_date: date)}
+  end
+
+  @impl true
+  def handle_event("select-day", %{"date" => date}, socket) do
+    {:noreply, push_patch(socket, to: ~p"/?#{[date: date]}")}
+  end
+
+  def handle_event("filter-version", %{"version" => version}, socket) do
+    {:noreply, assign(socket, version: parse_version(version))}
+  end
+
+  def handle_event("group-by", %{"group" => group}, socket) do
+    {:noreply, assign(socket, group_by: parse_group(group))}
+  end
+
+  def handle_event("refresh", _params, socket) do
+    {:noreply,
+     socket |> assign(loading: true) |> load_days(refresh: true) |> assign(loading: false)}
+  end
+
+  defp load_days(socket, opts \\ []) do
+    schedule = if opts[:refresh], do: Cinema.refresh(), else: Cinema.schedule()
+
+    socket
+    |> assign(days: schedule.days, fetched_at: schedule.fetched_at, stale?: schedule.stale?)
+    |> assign_new(:selected_date, fn -> default_date(schedule.days, socket.assigns.now_naive) end)
+  end
+
+  # An explicit ?date= always wins; otherwise open on the most useful day.
+  defp selected_date(%{"date" => date}, days, now) do
+    with {:ok, parsed} <- Date.from_iso8601(date),
+         true <- Enum.any?(days, &(&1.date == parsed)) do
+      parsed
+    else
+      _invalid -> default_date(days, now)
+    end
+  end
+
+  defp selected_date(_params, days, now), do: default_date(days, now)
+
+  defp default_date(days, now), do: Cinema.opening_date(days, now)
+
+  defp parse_version("vf"), do: :vf
+  defp parse_version("vost"), do: :vost
+  defp parse_version(_all), do: :all
+
+  defp parse_group("movie"), do: :movie
+  defp parse_group(_theater), do: :theater
+
+  # --- rendering ---------------------------------------------------------
+
+  @impl true
+  def render(assigns) do
+    assigns =
+      assign(assigns, day: Enum.find(assigns.days, &(&1.date == assigns.selected_date)))
+
+    ~H"""
+    <div class="board">
+      <header class="board-head">
+        <div class="board-title">
+          <h1>Séances à Grenoble</h1>
+          <div class="board-title-right">
+            <time class="clock" datetime={DateTime.to_iso8601(@now)}>
+              <span class="clock-date">{full_date(DateTime.to_date(@now))}</span>
+              <span class="clock-time">{Calendar.strftime(@now, "%H:%M")}</span>
+            </time>
+            <button class="refresh" phx-click="refresh" disabled={@loading} aria-label="Actualiser">
+              <span class="refresh-icon">{if @loading, do: "…", else: "↻"}</span>
+            </button>
+          </div>
+        </div>
+
+        <nav class="days" aria-label="Choisir un jour">
+          <button
+            :for={day <- @days}
+            class={["day", day.date == @selected_date && "is-current"]}
+            phx-click="select-day"
+            phx-value-date={Date.to_iso8601(day.date)}
+            aria-current={day.date == @selected_date && "true"}
+          >
+            <span class="day-name">{day_name(day.date)}</span>
+            <span class="day-num">{day.date.day}</span>
+          </button>
+        </nav>
+
+        <div class="controls">
+          <div class="versions" role="group" aria-label="Filtrer par version">
+            <button
+              :for={{label, value} <- [{"Tout", :all}, {"VF", :vf}, {"VOST", :vost}]}
+              class={["version", @version == value && "is-on"]}
+              phx-click="filter-version"
+              phx-value-version={value}
+            >
+              {label}
+            </button>
+          </div>
+
+          <div class="versions" role="group" aria-label="Regrouper les séances">
+            <button
+              :for={{label, value} <- [{"Par film", :movie}, {"Par cinéma", :theater}]}
+              class={["version", @group_by == value && "is-on"]}
+              phx-click="group-by"
+              phx-value-group={value}
+            >
+              {label}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <%= if @group_by == :movie do %>
+          <section :for={movie <- by_movie(@day, @version)} class="theater">
+            <div class="movie movie-lead">
+              <img
+                :if={movie.poster_url}
+                class="poster"
+                src={movie.poster_url}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                width="60"
+                height="80"
+              />
+              <div :if={is_nil(movie.poster_url)} class="poster poster-empty" aria-hidden="true">
+              </div>
+
+              <div class="movie-body">
+                <div class="movie-head">
+                  <h2 class="movie-title">{movie.title}</h2>
+                  <span :if={movie.runtime_min} class="movie-meta">{runtime(movie.runtime_min)}</span>
+                </div>
+
+                <div :for={venue <- movie.theaters} class="venue">
+                  <h3 class="venue-name">{venue.name}</h3>
+                  <ul class="times">
+                    <li :for={screening <- venue.screenings}>
+                      <.time_chip screening={screening} now={@now_naive} />
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <p :if={by_movie(@day, @version) == []} class="empty">
+            Aucune séance {empty_reason(@version)} ce jour-là.
+          </p>
+        <% else %>
+          <%= for theater <- visible_theaters(@day, @version) do %>
+            <section class="theater">
+              <h2 class="theater-name">{theater.name}</h2>
+
+              <article :for={movie <- theater.movies} class="movie">
+                <img
+                  :if={movie.poster_url}
+                  class="poster"
+                  src={movie.poster_url}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  width="60"
+                  height="80"
+                />
+                <div :if={is_nil(movie.poster_url)} class="poster poster-empty" aria-hidden="true">
+                </div>
+
+                <div class="movie-body">
+                  <div class="movie-head">
+                    <h3 class="movie-title">{movie.title}</h3>
+                    <span :if={movie.runtime_min} class="movie-meta">{runtime(movie.runtime_min)}</span>
+                  </div>
+
+                  <ul class="times">
+                    <li :for={screening <- movie.screenings}>
+                      <.time_chip screening={screening} now={@now_naive} />
+                    </li>
+                  </ul>
+                </div>
+              </article>
+            </section>
+          <% end %>
+
+          <p :if={visible_theaters(@day, @version) == []} class="empty">
+            Aucune séance {empty_reason(@version)} ce jour-là.
+          </p>
+        <% end %>
+      </main>
+
+      <footer class={["board-foot", @stale? && "is-stale"]}>
+        <span>Source AlloCiné</span>
+        <span :if={@fetched_at}>
+          {if @stale?, do: "AlloCiné injoignable — horaires du ", else: "Mis à jour à "}{local_time(
+            @fetched_at
+          )}
+        </span>
+      </footer>
+    </div>
+    """
+  end
+
+  attr :screening, :map, required: true
+  attr :now, NaiveDateTime, required: true
+
+  defp time_chip(assigns) do
+    assigns = assign(assigns, past?: Cinema.Screening.past?(assigns.screening, assigns.now))
+
+    ~H"""
+    <a
+      :if={@screening.booking_url && not @past?}
+      class={["chip", @screening.version == :vost && "is-vost"]}
+      href={@screening.booking_url}
+      target="_blank"
+      rel="noopener"
+    >
+      {format_time(@screening.starts_at)}
+    </a>
+    <span
+      :if={is_nil(@screening.booking_url) or @past?}
+      class={["chip", @screening.version == :vost && "is-vost", @past? && "is-past"]}
+    >
+      {format_time(@screening.starts_at)}
+    </span>
+    """
+  end
+
+  defp visible_theaters(nil, _version), do: []
+
+  defp visible_theaters(day, :all), do: day.theaters
+
+  defp visible_theaters(day, version) do
+    day.theaters
+    |> Enum.map(fn theater ->
+      movies =
+        theater.movies
+        |> Enum.map(fn movie ->
+          %{movie | screenings: Enum.filter(movie.screenings, &(&1.version == version))}
+        end)
+        |> Enum.reject(&(&1.screenings == []))
+
+      %{theater | movies: movies}
+    end)
+    |> Enum.reject(&(&1.movies == []))
+  end
+
+  # Filter first, then invert, so a movie only lists cinemas that still have a
+  # matching screening once the version filter is applied.
+  defp by_movie(day, version) do
+    case visible_theaters(day, version) do
+      [] -> []
+      theaters -> Cinema.by_movie(%{date: day.date, theaters: theaters})
+    end
+  end
+
+  defp empty_reason(:vf), do: "en VF"
+  defp empty_reason(:vost), do: "en VOST"
+  defp empty_reason(:all), do: ""
+
+  defp format_time(naive), do: Calendar.strftime(naive, "%H:%M")
+
+  defp local_time(%DateTime{} = at) do
+    case DateTime.shift_zone(at, "Europe/Paris") do
+      {:ok, local} -> Calendar.strftime(local, "%H:%M")
+      {:error, _no_tzdata} -> Calendar.strftime(at, "%H:%M")
+    end
+  end
+
+  defp runtime(minutes) when minutes >= 60 do
+    "#{div(minutes, 60)} h #{minutes |> rem(60) |> to_string() |> String.pad_leading(2, "0")}"
+  end
+
+  defp runtime(minutes), do: "#{minutes} min"
+
+  @days ~w(lun. mar. mer. jeu. ven. sam. dim.)
+  defp day_name(date), do: Enum.at(@days, Date.day_of_week(date) - 1)
+
+  @months ~w(janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc.)
+  defp month_name(date), do: Enum.at(@months, date.month - 1)
+
+  # Short enough to sit beside the clock on a phone: "mer. 24 juil."
+  defp full_date(date), do: "#{day_name(date)} #{date.day} #{month_name(date)}"
+end

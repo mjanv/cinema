@@ -1,0 +1,411 @@
+/* See the Tailwind configuration guide for advanced usage
+   https://tailwindcss.com/docs/configuration */
+
+@import "tailwindcss" source(none);
+@import "phoenix-colocated/cinema/colocated.css";
+@source "../css";
+@source "../js";
+@source "../../lib/cinema_web";
+/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
+@source "../../_build/dev/phoenix-colocated/cinema/*/";
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
+   The heroicons installation itself is managed by your mix.exs */
+@plugin "../vendor/heroicons";
+
+/* daisyUI Tailwind Plugin. */
+@plugin "daisyui/packages/bundle/daisyui" {
+  themes: false;
+}
+
+/* daisyUI theme plugin.
+  We ship with two themes, a light one inspired on Phoenix colors and a dark one inspired
+  on Elixir colors. Build your own at: https://daisyui.com/theme-generator/ */
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: "dark";
+  --color-base-100: oklch(30.33% 0.016 252.42);
+  --color-base-200: oklch(25.26% 0.014 253.1);
+  --color-base-300: oklch(20.15% 0.012 254.09);
+  --color-base-content: oklch(97.807% 0.029 256.847);
+  --color-primary: oklch(58% 0.233 277.117);
+  --color-primary-content: oklch(96% 0.018 272.314);
+  --color-secondary: oklch(58% 0.233 277.117);
+  --color-secondary-content: oklch(96% 0.018 272.314);
+  --color-accent: oklch(60% 0.25 292.717);
+  --color-accent-content: oklch(96% 0.016 293.756);
+  --color-neutral: oklch(37% 0.044 257.287);
+  --color-neutral-content: oklch(98% 0.003 247.858);
+  --color-info: oklch(58% 0.158 241.966);
+  --color-info-content: oklch(97% 0.013 236.62);
+  --color-success: oklch(60% 0.118 184.704);
+  --color-success-content: oklch(98% 0.014 180.72);
+  --color-warning: oklch(66% 0.179 58.318);
+  --color-warning-content: oklch(98% 0.022 95.277);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1.5px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(98% 0 0);
+  --color-base-200: oklch(96% 0.001 286.375);
+  --color-base-300: oklch(92% 0.004 286.32);
+  --color-base-content: oklch(21% 0.006 285.885);
+  --color-primary: oklch(70% 0.213 47.604);
+  --color-primary-content: oklch(98% 0.016 73.684);
+  --color-secondary: oklch(55% 0.027 264.364);
+  --color-secondary-content: oklch(98% 0.002 247.839);
+  --color-accent: oklch(0% 0 0);
+  --color-accent-content: oklch(100% 0 0);
+  --color-neutral: oklch(44% 0.017 285.786);
+  --color-neutral-content: oklch(98% 0 0);
+  --color-info: oklch(62% 0.214 259.815);
+  --color-info-content: oklch(97% 0.014 254.604);
+  --color-success: oklch(70% 0.14 182.503);
+  --color-success-content: oklch(98% 0.014 180.72);
+  --color-warning: oklch(66% 0.179 58.318);
+  --color-warning-content: oklch(98% 0.022 95.277);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1.5px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Add variants based on LiveView classes */
+@custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+
+/* Use the data attribute for dark mode  */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* Make LiveView wrapper divs transparent for layout */
+[data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* This file is for your main application CSS */
+
+/* ---------------------------------------------------------------------
+   Showtimes board — a departure board, not a streaming grid.
+   Times are the data, so they get the tabular figures and the accent.
+   --------------------------------------------------------------------- */
+
+.board {
+  --ink: #0f1115;
+  --paper: #f5f2ec;
+  --accent: #e4572e;
+  --slate: #7a8b99;
+  --rule: #232830;
+
+  background: var(--ink);
+  color: var(--paper);
+  min-height: 100dvh;
+  padding: 0 0 env(safe-area-inset-bottom);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.board-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--ink) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  padding: 1rem 1rem 0.75rem;
+}
+
+.board-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.board-title h1 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.board-title-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+/* The reference point for reading every time on the board: the hour leads,
+   the date sits above it as quiet context. */
+.clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+
+.clock-date {
+  color: var(--slate);
+  font-size: 0.625rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.clock-time {
+  color: var(--paper);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.refresh {
+  background: none;
+  border: 0;
+  color: var(--slate);
+  cursor: pointer;
+  font-size: 1.125rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+}
+.refresh:hover:not(:disabled) { color: var(--paper); }
+.refresh:disabled { opacity: 0.5; cursor: default; }
+
+/* Day strip: scrolls horizontally, thumb-sized targets. */
+.days {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.875rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.days::-webkit-scrollbar { display: none; }
+
+.day {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  min-width: 3rem;
+  padding: 0.4rem 0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--slate);
+  cursor: pointer;
+  font: inherit;
+}
+.day-name { font-size: 0.6875rem; text-transform: lowercase; letter-spacing: 0.02em; }
+.day-num {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.day:hover { color: var(--paper); }
+.day.is-current {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--paper);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.versions {
+  display: flex;
+  gap: 0.375rem;
+}
+.version {
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--slate);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.7rem;
+}
+.version:hover { color: var(--paper); }
+.version.is-on { background: var(--rule); color: var(--paper); border-color: var(--slate); }
+
+main { padding: 0.5rem 1rem 3rem; }
+
+.theater { margin-top: 1.75rem; }
+
+.theater-name {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--slate);
+  margin: 0 0 0.625rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.movie {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
+}
+.movie:last-child { border-bottom: 0; }
+
+/* Poster is an identifier, not the subject: small, quiet, never a hero. */
+.poster {
+  width: 3.25rem;
+  height: 4.35rem;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--rule);
+  display: block;
+}
+
+.poster-empty { border: 1px solid var(--rule); background: none; }
+
+.movie-body { min-width: 0; }
+
+.movie-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.movie-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.movie-meta {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--slate);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The signature: tabular time chips, VOST marked by a rule, not a badge. */
+.times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.chip {
+  display: inline-block;
+  min-width: 3.25rem;
+  text-align: center;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  color: var(--paper);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+a.chip:hover { border-color: var(--paper); }
+
+/* Already started: kept on the board (it still says what a cinema programmes)
+   but dimmed so the eye skips to what is still catchable. */
+.chip.is-past {
+  color: var(--slate);
+  border-color: color-mix(in srgb, var(--rule) 60%, transparent);
+  opacity: 0.55;
+}
+
+.chip.is-past.is-vost { border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+.chip.is-vost {
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: calc(0.3rem - 1px);
+}
+
+/* Grouped by movie: the film is the heading, cinemas become the sub-rows. */
+.movie-lead { border-bottom: 0; padding-top: 0; }
+.movie-lead .movie-title { font-size: 1rem; font-weight: 600; }
+
+.venue { margin-top: 0.625rem; }
+
+.venue-name {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--slate);
+  margin: 0 0 0.375rem;
+}
+
+.venue .times { margin-top: 0; }
+
+.empty {
+  color: var(--slate);
+  font-size: 0.875rem;
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.board-foot.is-stale { color: var(--accent); }
+
+.board-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--rule);
+  color: var(--slate);
+  font-size: 0.6875rem;
+  margin: 0 1rem;
+  padding: 0.875rem 0 1.5rem;
+}
+
+@media (min-width: 40rem) {
+  .board-head, main, .board-foot { max-width: 46rem; margin-inline: auto; }
+  .board-head { padding-inline: 0; }
+  main { padding-inline: 0; }
+  .board-foot { margin-inline: auto; }
+}
+
+:where(.board) :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

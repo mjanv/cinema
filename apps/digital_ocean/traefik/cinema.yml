@@ -1,0 +1,30 @@
+# Cinema's Traefik routing. Owned entirely by this repo.
+#
+# Installed to /opt/traefik/dynamic/cinema.yml on every deploy. That directory
+# is shared: premiere-ecoute owns premiere-ecoute.yml, cinema owns this file,
+# and Traefik merges every *.yml it finds into one config. Neither app's deploy
+# touches the other's file, so neither can take the other offline.
+#
+# The directory provider is configured in premiere-ecoute's traefik.yml
+# (providers.file.directory). Traefik watches the directory, so writing this
+# file applies immediately — no restart.
+
+http:
+  routers:
+    cinema:
+      rule: "Host(`cinema.premiere-ecoute.fr`)"
+      service: cinema
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+        # HTTP/2 strips Connection/Upgrade headers and breaks Phoenix LiveView
+        # websocket upgrades. `no-h2` is defined in premiere-ecoute's dynamic.yml;
+        # TLS options are global across all files the provider loads.
+        options: no-h2
+
+  services:
+    cinema:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:4001"

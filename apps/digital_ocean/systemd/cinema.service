@@ -1,0 +1,43 @@
+[Unit]
+Description=Cinema Showtimes Phoenix Application
+After=network.target
+
+[Service]
+Type=exec
+User=cinema
+Group=cinema
+WorkingDirectory=/opt/cinema
+EnvironmentFile=/opt/cinema/.env
+Environment="MIX_ENV=prod"
+Environment="LANG=en_US.UTF-8"
+Environment="LC_ALL=en_US.UTF-8"
+
+# No ExecStartPre: this app has no database and nothing to migrate.
+ExecStart=/opt/cinema/bin/server
+
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cinema
+
+# Small footprint: the whole schedule is a few days of showtimes in ETS.
+# Sized to leave premiere-ecoute's 600M allocation untouched on a 1GB droplet.
+MemoryMax=150M
+MemoryHigh=120M
+MemorySwapMax=64M
+
+CPUQuota=40%
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/cinema
+
+[Install]
+WantedBy=multi-user.target

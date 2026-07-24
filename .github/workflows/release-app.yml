@@ -1,0 +1,160 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two pushes deploying at once would race on rsync and the rollback backup.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Elixir and Erlang
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.20.2'
+          otp-version: '29.0.2'
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            ~/.mix
+            ~/.hex
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build/prod
+          key: ${{ runner.os }}-build-prod-${{ hashFiles('**/mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/**/*.exs', 'mix.exs') }}
+          restore-keys: |
+            ${{ runner.os }}-build-prod-${{ hashFiles('**/mix.lock') }}-
+            ${{ runner.os }}-build-prod-
+
+      - name: Install dependencies
+        run: mix deps.get --only prod
+        env:
+          MIX_ENV: prod
+
+      - name: Run tests
+        run: |
+          mix deps.get
+          mix test
+        env:
+          MIX_ENV: test
+
+      - name: Deploy assets
+        run: |
+          mix tailwind cinema --minify
+          mix esbuild cinema --minify
+          mix phx.digest
+        env:
+          MIX_ENV: prod
+
+      - name: Build release
+        run: mix release --overwrite --quiet
+        env:
+          MIX_ENV: prod
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.DO_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create .env.production file
+        run: |
+          cat > .env.production <<EOF
+          PHX_HOST=${PHX_HOST}
+          PHX_SERVER=true
+          # 4000 belongs to premiere-ecoute on this host.
+          PORT=4001
+          SECRET_KEY_BASE=${SECRET_KEY_BASE}
+          MIX_ENV=prod
+          EOF
+        env:
+          PHX_HOST: cinema.premiere-ecoute.fr
+          SECRET_KEY_BASE: ${{ secrets.CINEMA_SECRET_KEY_BASE }}
+
+      - name: Backup current release
+        run: |
+          ssh root@${{ vars.DO_HOST }} '
+            rm -rf /opt/cinema-backup
+            if [ -d /opt/cinema ]; then cp -a /opt/cinema /opt/cinema-backup; fi
+          '
+
+      - name: Deploy release to server
+        run: |
+          rsync -avzq --delete --exclude='.env' _build/prod/rel/cinema/ root@${{ vars.DO_HOST }}:/opt/cinema/
+          scp .env.production root@${{ vars.DO_HOST }}:/opt/cinema/.env
+          # Cinema owns exactly this one file in the shared Traefik directory.
+          scp apps/digital_ocean/traefik/cinema.yml root@${{ vars.DO_HOST }}:/opt/traefik/dynamic/cinema.yml
+          ssh root@${{ vars.DO_HOST }} '
+            chown -R cinema:cinema /opt/cinema
+            chmod 600 /opt/cinema/.env
+            find /opt/cinema \( -path "*/bin/*" -o -path "*/releases/*/elixir" -o -path "*/releases/*/iex" -o -name "*.so" \) -type f -exec chmod +x {} \;
+          '
+
+      - name: Remove local secrets file
+        if: always()
+        run: rm -f .env.production
+
+      - name: Restart application
+        run: |
+          ssh root@${{ vars.DO_HOST }} '
+            systemctl restart cinema
+            systemctl status cinema --no-pager
+            journalctl -u cinema -n 50 --no-pager
+          '
+
+      - name: Health check
+        id: health_check
+        run: |
+          for i in $(seq 0 60); do
+            if curl -fsS -o /dev/null https://cinema.premiere-ecoute.fr/health; then
+              echo "Application is healthy"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Application failed health check"
+          exit 1
+
+      - name: Rollback on failed health check
+        if: failure() && steps.health_check.outcome == 'failure'
+        run: |
+          ssh root@${{ vars.DO_HOST }} '
+            if [ -d /opt/cinema-backup ]; then
+              rm -rf /opt/cinema
+              mv /opt/cinema-backup /opt/cinema
+              chown -R cinema:cinema /opt/cinema
+              systemctl restart cinema
+              systemctl status cinema --no-pager
+            else
+              echo "No backup to roll back to (first deploy)."
+            fi
+          '
+
+      - name: Clean up backup after successful deploy
+        if: success()
+        run: ssh root@${{ vars.DO_HOST }} 'rm -rf /opt/cinema-backup'

@@ -1,0 +1,4 @@
+# This board re-publishes showtimes owned by AlloCiné for personal use.
+# Keeping it out of search indexes keeps it a personal tool, not a mirror.
+User-agent: *
+Disallow: /
