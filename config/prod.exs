@@ -15,4 +15,4 @@ config :logger, level: :info
 
 config :cinema, Cinema.Showtimes,
   warm_on_boot: true,
-  cache_ttl_ms: :timer.hours(3)
+  cache_ttl_ms: :timer.hours(12)

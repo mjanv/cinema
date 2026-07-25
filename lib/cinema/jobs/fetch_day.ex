@@ -34,7 +34,7 @@ defmodule Cinema.Jobs.FetchDay do
   # job at a time each request still finishes in ~150ms, which is ~7/s and
   # enough to trip AlloCiné on a cold Paris. Sleeping here makes the rate
   # explicit and keeps a big city under their limit.
-  @pace_ms 400
+  @pace_ms 2_000
 
   # Long enough for a rate limit to lapse, short enough that a day still lands
   # while it is useful.
