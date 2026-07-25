@@ -83,6 +83,10 @@ defmodule Cinema do
   @spec now() :: DateTime.t()
   defdelegate now(), to: Showtimes
 
+  @doc "Short commit SHA of the running build."
+  @spec commit() :: String.t()
+  defdelegate commit(), to: Cinema.Version
+
   @doc """
   Which day the board should open on: today, unless its programme is spent.
 

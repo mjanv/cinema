@@ -290,7 +290,7 @@ defmodule CinemaWeb.ShowtimesLive do
       </main>
 
       <footer class={["board-foot", @stale? && "is-stale"]}>
-        <span>Source AlloCiné</span>
+        <span>Source AlloCiné · <code class="build">{Cinema.commit()}</code></span>
         <span :if={@fetched_at}>
           {if @stale?, do: "AlloCiné injoignable — horaires du ", else: "Mis à jour à "}{local_time(
             @fetched_at

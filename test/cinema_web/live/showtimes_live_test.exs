@@ -137,6 +137,13 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     assert html =~ ~s(class="genres")
   end
 
+  test "shows the running build in the footer", %{conn: conn} do
+    {:ok, _live, html} = live(conn, ~p"/")
+
+    assert html =~ ~s(class="build")
+    assert html =~ Cinema.commit()
+  end
+
   test "regroups by cinema on demand", %{conn: conn} do
     {:ok, live, _html} = live(conn, ~p"/")
 

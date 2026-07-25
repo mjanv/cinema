@@ -65,7 +65,14 @@ jobs:
           MIX_ENV: prod
 
       - name: Build release
-        run: mix release --overwrite --quiet
+        run: |
+          # Cinema.Version bakes GITHUB_SHA in at compile time, and the build
+          # cache is keyed on lib/**/*.ex. A commit touching only assets would
+          # restore a cached module and report the previous SHA — exactly when
+          # you are checking the footer to confirm the deploy landed.
+          touch lib/cinema/version.ex
+          mix compile
+          mix release --overwrite --quiet
         env:
           MIX_ENV: prod
 

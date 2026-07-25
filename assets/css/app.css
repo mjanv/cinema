@@ -511,3 +511,10 @@ a.chip:hover { border-color: var(--paper); }
   white-space: nowrap;
   border: 0;
 }
+
+/* Build identifier: monospace so a SHA reads as one, at the footer's size. */
+.build {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0;
+}
