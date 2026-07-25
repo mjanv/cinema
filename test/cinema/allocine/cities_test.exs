@@ -40,12 +40,24 @@ defmodule Cinema.Allocine.CitiesTest do
       assert "UGC Astoria" in Enum.map(theaters, & &1.name)
     end
 
-    test "keeps theaters whose id uses the W prefix, not just P" do
-      # AlloCiné issues both; an anchor on P\d+ silently drops cinemas.
-      html = ~s(<a href="/seance/salle_gen_csalle=W7461.html">Megarama Annecy</a>)
+    test "keeps every theater id format AlloCiné issues" do
+      # Ids are not all P\d+: Véo Cartoucherie in Toulouse is G0699, and some
+      # carry hex digits (G06DB). Anchoring on too narrow a pattern silently
+      # drops real cinemas from a city.
+      html =
+        Enum.map_join(
+          [
+            {"W7461", "Megarama Annecy"},
+            {"G0699", "Véo Cartoucherie"},
+            {"G06DB", "Véo Le Sénéchal"},
+            {"P0071", "ABC"}
+          ],
+          fn {id, name} -> ~s(<a href="/seance/salle_gen_csalle=#{id}.html">#{name}</a>) end
+        )
 
-      assert [theater] = Cities.parse_theaters(html, "Annecy")
-      assert theater.external_id == "W7461"
+      ids = html |> Cities.parse_theaters("Toulouse") |> Enum.map(& &1.external_id)
+
+      assert Enum.sort(ids) == ["G0699", "G06DB", "P0071", "W7461"]
     end
 
     test "deduplicates a theater linked more than once on the page" do

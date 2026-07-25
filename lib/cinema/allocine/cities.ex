@@ -141,8 +141,10 @@ defmodule Cinema.Allocine.Cities do
   @doc false
   @spec parse_theaters(String.t(), String.t()) :: [Theater.t()]
   def parse_theaters(html, city_name) when is_binary(html) do
-    # Ids come in P and W flavours; anchoring on P alone silently drops cinemas.
-    ~r|salle_gen_csalle=([PW]\d+)\.html"[^>]*>\s*([^<]{2,80})|
+    # Ids are an opaque alphanumeric code (P0071, W7461, G0699, G06DB). Match
+    # the shape rather than a list of prefixes: anchoring on [PW]\d+ silently
+    # dropped Véo Cartoucherie from Toulouse.
+    ~r|salle_gen_csalle=([A-Z0-9]+)\.html"[^>]*>\s*([^<]{2,80})|
     |> Regex.scan(html)
     |> Enum.map(fn [_all, id, name] ->
       %Theater{external_id: id, name: clean(name), city: city_name}
