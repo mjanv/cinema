@@ -11,10 +11,13 @@ defmodule Cinema.Source do
   so one failing site cannot take down the whole page.
   """
 
-  alias Cinema.{Screening, Theater}
+  alias Cinema.{City, Screening, Theater}
 
-  @doc "Theaters this source can serve, in display order."
-  @callback theaters() :: [Theater.t()]
+  @doc "Cities this source can serve, in display order."
+  @callback cities() :: [City.t()]
+
+  @doc "Theaters in one city, in display order."
+  @callback theaters(city :: City.t()) :: [Theater.t()]
 
   @doc "Screenings for one theater on one date."
   @callback fetch_day(theater :: Theater.t(), date :: Date.t()) ::

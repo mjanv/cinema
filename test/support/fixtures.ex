@@ -11,4 +11,7 @@ defmodule Cinema.Fixtures do
     |> File.read!()
     |> Jason.decode!()
   end
+
+  @doc "Raw HTML fixture, for the pages that are scraped rather than fetched as JSON."
+  def html!(name), do: @dir |> Path.join("#{name}.html") |> File.read!()
 end

@@ -7,10 +7,9 @@ defmodule Cinema.Showtimes do
   already started are deliberately kept, so the page reflects the full day.
   """
 
-  alias Cinema.{Screening, Theater}
+  alias Cinema.{City, Screening, Theater}
 
   @cache __MODULE__.Cache
-  @cache_key :days
   @ttl :timer.minutes(30)
 
   # While a source is down, retry on this shorter cadence instead of on every
@@ -35,17 +34,17 @@ defmodule Cinema.Showtimes do
 
   Options: `:days` (default from config), `:today`, `:refresh` to bypass the cache.
   """
-  @spec list_days(keyword()) :: [day()]
-  def list_days(opts \\ []) do
+  @spec list_days(City.t(), keyword()) :: [day()]
+  def list_days(%City{} = city, opts \\ []) do
     days = Keyword.get(opts, :days, config(:days, 7))
     today = Keyword.get(opts, :today, today())
     refresh? = Keyword.get(opts, :refresh, false)
 
     with false <- refresh?,
-         {:ok, entry} <- read_cache(:fresh) do
+         {:ok, entry} <- read_cache(city, :fresh) do
       entry.days
     else
-      _reload -> reload(today, days)
+      _reload -> reload(city, today, days)
     end
   end
 
@@ -55,9 +54,9 @@ defmodule Cinema.Showtimes do
   `stale?` is true when the last fetch failed and the previous schedule is being
   served instead, so the UI can say so rather than silently showing old times.
   """
-  @spec status() :: %{days: [day()], fetched_at: DateTime.t() | nil, stale?: boolean()}
-  def status do
-    case read_cache(:any) do
+  @spec status(City.t()) :: %{days: [day()], fetched_at: DateTime.t() | nil, stale?: boolean()}
+  def status(%City{} = city) do
+    case read_cache(city, :any) do
       {:ok, entry} ->
         %{days: entry.days, fetched_at: entry.fetched_at, stale?: entry.stale?}
 
@@ -125,24 +124,24 @@ defmodule Cinema.Showtimes do
 
   # A source outage must not evict a good schedule: an empty fetch keeps the
   # previous days and only marks them stale.
-  defp reload(today, days) do
-    fetched = load(today, days)
+  defp reload(city, today, days) do
+    fetched = load(city, today, days)
 
     if empty?(fetched) do
-      case read_cache(:any) do
-        {:ok, %{days: [_ | _] = previous}} -> put_cache(previous, stale?: true).days
-        _no_previous -> put_cache(fetched, stale?: false).days
+      case read_cache(city, :any) do
+        {:ok, %{days: [_ | _] = previous}} -> put_cache(city, previous, stale?: true).days
+        _no_previous -> put_cache(city, fetched, stale?: false).days
       end
     else
-      put_cache(fetched, stale?: false).days
+      put_cache(city, fetched, stale?: false).days
     end
   end
 
   defp empty?(days), do: Enum.all?(days, &(&1.theaters == []))
 
-  defp load(today, days) do
+  defp load(city, today, days) do
     source = config(:source, Cinema.Allocine)
-    build(source.theaters(), &source.fetch_day/2, today, days)
+    build(source.theaters(city), &source.fetch_day/2, today, days)
   end
 
   @doc """
@@ -298,7 +297,7 @@ defmodule Cinema.Showtimes do
   @doc false
   def reset_cache do
     init_cache()
-    :ets.delete(@cache, @cache_key)
+    :ets.delete_all_objects(@cache)
     :ok
   rescue
     ArgumentError -> :ok
@@ -306,9 +305,11 @@ defmodule Cinema.Showtimes do
 
   # `:fresh` respects the TTL; `:any` returns the last schedule whatever its age,
   # which is what lets an outage fall back instead of blanking the page.
-  defp read_cache(mode) do
-    case :ets.lookup(@cache, @cache_key) do
-      [{@cache_key, entry, stored_at}] ->
+  defp read_cache(city, mode) do
+    key = cache_key(city)
+
+    case :ets.lookup(@cache, key) do
+      [{^key, entry, stored_at}] ->
         age = System.monotonic_time(:millisecond) - stored_at
         ttl = if entry.stale?, do: @stale_retry_ms, else: config(:cache_ttl_ms, @ttl)
 
@@ -321,26 +322,31 @@ defmodule Cinema.Showtimes do
     ArgumentError -> :miss
   end
 
-  defp put_cache(days, opts) do
+  defp put_cache(city, days, opts) do
+    stale? = Keyword.fetch!(opts, :stale?)
+
     entry = %{
       days: days,
-      stale?: Keyword.fetch!(opts, :stale?),
-      fetched_at:
-        if(Keyword.fetch!(opts, :stale?), do: last_fetched_at(), else: DateTime.utc_now())
+      stale?: stale?,
+      fetched_at: if(stale?, do: last_fetched_at(city), else: DateTime.utc_now())
     }
 
-    :ets.insert(@cache, {@cache_key, entry, System.monotonic_time(:millisecond)})
+    :ets.insert(@cache, {cache_key(city), entry, System.monotonic_time(:millisecond)})
     entry
   rescue
     ArgumentError -> %{days: days, stale?: false, fetched_at: DateTime.utc_now()}
   end
 
-  defp last_fetched_at do
-    case read_cache(:any) do
+  defp last_fetched_at(city) do
+    case read_cache(city, :any) do
       {:ok, %{fetched_at: at}} -> at
       :miss -> DateTime.utc_now()
     end
   end
+
+  # Keyed per city: without this, switching city would serve the previous
+  # city's schedule from cache.
+  defp cache_key(%City{slug: slug}), do: {:days, slug}
 
   defp timezone, do: config(:timezone, "Europe/Paris")
 

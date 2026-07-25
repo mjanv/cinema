@@ -4,24 +4,24 @@ defmodule CinemaTest do
 
   setup do
     Cinema.reset_cache()
-    :ok
+    {:ok, city: Cinema.find_city(nil)}
   end
 
-  test "schedule/1 returns the days together with their freshness" do
-    schedule = Cinema.schedule()
+  test "schedule/2 returns the days together with their freshness", %{city: city} do
+    schedule = Cinema.schedule(city)
 
     assert %{days: days, fetched_at: %DateTime{}, stale?: false} = schedule
     assert length(days) == 3, "the test source is configured for 3 days"
     assert Enum.all?(days, &match?(%{date: %Date{}, theaters: _}, &1))
   end
 
-  test "schedule/1 honours the requested horizon" do
-    assert %{days: days} = Cinema.schedule(days: 1)
+  test "schedule/2 honours the requested horizon", %{city: city} do
+    assert %{days: days} = Cinema.schedule(city, days: 1)
     assert length(days) == 1
   end
 
-  test "by_movie/1 regroups a day around films" do
-    %{days: [day | _]} = Cinema.schedule(days: 1)
+  test "by_movie/1 regroups a day around films", %{city: city} do
+    %{days: [day | _]} = Cinema.schedule(city, days: 1)
 
     assert [movie | _] = Cinema.by_movie(day)
     assert %{title: title, theaters: [_ | _]} = movie
@@ -48,11 +48,23 @@ defmodule CinemaTest do
     assert Cinema.now() |> DateTime.to_date() == Cinema.today()
   end
 
-  test "exposes the whole surface the web layer needs" do
-    exported = Cinema.__info__(:functions) |> Keyword.keys() |> MapSet.new()
+  test "cities/0 lists the cities the board can show" do
+    cities = Cinema.cities()
 
-    for name <- [:schedule, :refresh, :by_movie, :today, :now] do
-      assert name in exported, "Cinema must expose #{name}/_"
-    end
+    assert [_ | _] = cities
+    assert Enum.all?(cities, &match?(%Cinema.City{}, &1))
+    assert "Grenoble" in Enum.map(cities, & &1.name)
+  end
+
+  test "find_city/1 resolves a public slug, ignoring the source's own id" do
+    assert Cinema.find_city("lyon").name == "Lyon"
+
+    # AlloCiné's key is internal; it must not address a city from the outside.
+    assert Cinema.find_city("ville-113315").name == "Grenoble"
+  end
+
+  test "find_city/1 falls back to the default for an unknown slug" do
+    assert Cinema.find_city("nowhere-at-all").name == "Grenoble"
+    assert Cinema.find_city(nil).name == "Grenoble"
   end
 end

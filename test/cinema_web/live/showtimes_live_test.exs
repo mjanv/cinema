@@ -60,6 +60,64 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     assert has_element?(live, "button.day.is-current[phx-value-date='#{tomorrow}']")
   end
 
+  test "offers every city and marks the current one", %{conn: conn} do
+    {:ok, live, _html} = live(conn, ~p"/")
+
+    assert has_element?(live, "select#city option[value=grenoble][selected]")
+    assert has_element?(live, "select#city option[value=lyon]")
+  end
+
+  test "switching city loads that city's schedule", %{conn: conn} do
+    {:ok, live, html} = live(conn, ~p"/")
+    assert html =~ "Toy Story 5"
+
+    html = live |> form("form.city-picker", city: "lyon") |> render_change()
+
+    assert html =~ "Film Lyonnais", "the Lyon board must replace Grenoble's"
+    refute html =~ "Toy Story 5"
+    assert html =~ "Cinéma Lyonnais"
+  end
+
+  test "a city in the URL is what gets rendered", %{conn: conn} do
+    {:ok, _live, html} = live(conn, ~p"/?city=lyon")
+
+    assert html =~ "Film Lyonnais"
+    refute html =~ "Toy Story 5"
+  end
+
+  test "an unknown city falls back to the default rather than erroring", %{conn: conn} do
+    {:ok, _live, html} = live(conn, ~p"/?city=nowhere-at-all")
+
+    assert html =~ "Toy Story 5"
+  end
+
+  test "renders an explicit message instead of crashing when no city resolves", %{conn: conn} do
+    # Reproduces the 429 case: the source returns nothing, so there is no city
+    # to render. This used to raise BadMapError on @city.name and KeyError on
+    # @days rather than telling the user anything.
+    defmodule NoCitiesSource do
+      @behaviour Cinema.Source
+      @impl true
+      def cities, do: []
+      @impl true
+      def theaters(_city), do: []
+      @impl true
+      def fetch_day(_theater, _date), do: {:ok, []}
+    end
+
+    previous = Application.get_env(:cinema, Cinema.Showtimes, [])
+    Application.put_env(:cinema, Cinema.Showtimes, Keyword.put(previous, :source, NoCitiesSource))
+    on_exit(fn -> Application.put_env(:cinema, Cinema.Showtimes, previous) end)
+
+    {:ok, live, html} = live(conn, ~p"/")
+
+    assert html =~ "AlloCiné est injoignable"
+    refute has_element?(live, "select#city")
+
+    # Interacting with a city-less board must not crash either.
+    assert render_click(live, "refresh") =~ "AlloCiné est injoignable"
+  end
+
   test "regroups by cinema on demand", %{conn: conn} do
     {:ok, live, _html} = live(conn, ~p"/")
 
@@ -109,6 +167,6 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     |> element("button[phx-value-date='#{tomorrow}']")
     |> render_click()
 
-    assert_patched(live, "/?date=#{tomorrow}")
+    assert_patched(live, "/?city=grenoble&date=#{tomorrow}")
   end
 end

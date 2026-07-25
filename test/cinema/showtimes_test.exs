@@ -191,7 +191,9 @@ defmodule Cinema.ShowtimesTest do
       defmodule WorkingSource do
         @behaviour Cinema.Source
         @impl true
-        def theaters, do: [%Cinema.Theater{external_id: "T1", name: "Cinéma Un"}]
+        def cities, do: [Cinema.City.new("ville-98857", "Grenoble")]
+        @impl true
+        def theaters(_city), do: [%Cinema.Theater{external_id: "T1", name: "Cinéma Un"}]
         @impl true
         def fetch_day(_theater, date) do
           {:ok,
@@ -211,27 +213,32 @@ defmodule Cinema.ShowtimesTest do
       defmodule DeadSource do
         @behaviour Cinema.Source
         @impl true
-        def theaters, do: [%Cinema.Theater{external_id: "T1", name: "Cinéma Un"}]
+        def cities, do: [Cinema.City.new("ville-98857", "Grenoble")]
+        @impl true
+        def theaters(_city), do: [%Cinema.Theater{external_id: "T1", name: "Cinéma Un"}]
         @impl true
         def fetch_day(_theater, _date), do: {:error, :econnrefused}
       end
 
       put_source(WorkingSource)
-      good = Cinema.Showtimes.list_days(days: 1, refresh: true)
+      city = Cinema.City.new("ville-98857", "Grenoble")
+      good = Cinema.Showtimes.list_days(city, days: 1, refresh: true)
       assert [%{theaters: [_ | _]}] = good
 
       put_source(DeadSource)
-      during_outage = Cinema.Showtimes.list_days(days: 1, refresh: true)
+      during_outage = Cinema.Showtimes.list_days(city, days: 1, refresh: true)
 
       assert during_outage == good, "an outage must not blank the board"
-      assert Cinema.Showtimes.status().stale?
+      assert Cinema.Showtimes.status(city).stale?
     end
 
     test "reports a fresh schedule as not stale" do
       defmodule LiveSource do
         @behaviour Cinema.Source
         @impl true
-        def theaters, do: [%Cinema.Theater{external_id: "T1", name: "Cinéma Un"}]
+        def cities, do: [Cinema.City.new("ville-98857", "Grenoble")]
+        @impl true
+        def theaters(_city), do: [%Cinema.Theater{external_id: "T1", name: "Cinéma Un"}]
         @impl true
         def fetch_day(_theater, date) do
           {:ok,
@@ -249,9 +256,10 @@ defmodule Cinema.ShowtimesTest do
       end
 
       put_source(LiveSource)
-      Cinema.Showtimes.list_days(days: 1, refresh: true)
+      city = Cinema.City.new("ville-98857", "Grenoble")
+      Cinema.Showtimes.list_days(city, days: 1, refresh: true)
 
-      status = Cinema.Showtimes.status()
+      status = Cinema.Showtimes.status(city)
       refute status.stale?
       assert %DateTime{} = status.fetched_at
     end

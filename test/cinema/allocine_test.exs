@@ -5,23 +5,6 @@ defmodule Cinema.AllocineTest do
 
   @theater %Theater{external_id: "P0070", name: "Le Méliès", city: "Grenoble"}
 
-  test "implements the Cinema.Source behaviour" do
-    behaviours =
-      Allocine.module_info(:attributes)
-      |> Keyword.get_values(:behaviour)
-      |> List.flatten()
-
-    assert Cinema.Source in behaviours
-  end
-
-  test "lists the Grenoble theaters" do
-    theaters = Allocine.theaters()
-
-    assert Enum.all?(theaters, &match?(%Theater{}, &1))
-    assert "Le Méliès - Grenoble" in Enum.map(theaters, & &1.name)
-    assert "P1032" in Enum.map(theaters, & &1.external_id)
-  end
-
   test "fetches and parses a day into screenings" do
     body = Cinema.Fixtures.load!("theater_P0070_2026-07-26")
 

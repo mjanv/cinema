@@ -11,7 +11,7 @@ defmodule Cinema.Allocine do
 
   @behaviour Cinema.Source
 
-  alias Cinema.Allocine.Parser
+  alias Cinema.Allocine.{Cities, Parser}
   alias Cinema.Theater
 
   require Logger
@@ -24,16 +24,11 @@ defmodule Cinema.Allocine do
   # Guards against a pagination bug turning into an unbounded request loop.
   @max_pages 10
 
-  @theaters [
-    %Theater{external_id: "P1032", name: "Pathé Grenoble - IMAX", city: "Grenoble"},
-    %Theater{external_id: "P0070", name: "Le Méliès - Grenoble", city: "Grenoble"},
-    %Theater{external_id: "P0069", name: "Le Club", city: "Grenoble"},
-    %Theater{external_id: "P0068", name: "La Nef", city: "Grenoble"},
-    %Theater{external_id: "P0758", name: "Cinéma Juliet Berto", city: "Grenoble"}
-  ]
+  @impl Cinema.Source
+  def cities, do: Cities.list()
 
   @impl Cinema.Source
-  def theaters, do: @theaters
+  def theaters(%Cinema.City{} = city), do: Cities.theaters(city)
 
   @impl Cinema.Source
   def fetch_day(theater, date), do: fetch_day(theater, date, [])

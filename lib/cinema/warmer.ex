@@ -18,7 +18,8 @@ defmodule Cinema.Warmer do
   def run(_opts) do
     if enabled?() do
       started = System.monotonic_time(:millisecond)
-      %{days: days} = Cinema.refresh()
+      city = Cinema.find_city(nil)
+      %{days: days} = Cinema.refresh(city)
       count = Enum.sum(Enum.map(days, &length(&1.theaters)))
       elapsed = System.monotonic_time(:millisecond) - started
 
