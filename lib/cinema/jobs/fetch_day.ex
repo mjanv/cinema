@@ -24,11 +24,13 @@ defmodule Cinema.Jobs.FetchDay do
 
   alias Cinema.{City, Store}
 
+  require Logger
+
   @namespace :fetched_days
 
   # How long a fetched day stays usable. Matches the schedule cache: this is the
   # same data, just stored per theater instead of per city.
-  @ttl :timer.hours(3)
+  @ttl :timer.hours(12)
 
   # Spacing between fetches. The queue limit caps concurrency, not rate: at one
   # job at a time each request still finishes in ~150ms, which is ~7/s and
@@ -90,6 +92,12 @@ defmodule Cinema.Jobs.FetchDay do
     case source().fetch_day(theater, date) do
       {:ok, screenings} ->
         Store.put(@namespace, key(city.slug, theater.external_id, date), screenings)
+
+        Logger.info(
+          "Fetched #{length(screenings)} screenings: #{theater.name} (#{theater.external_id}) " <>
+            "#{Date.to_iso8601(date)} [#{city.slug}]"
+        )
+
         :ok
 
       {:error, {:http_status, 429}} ->
