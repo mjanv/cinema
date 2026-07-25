@@ -3,12 +3,12 @@ defmodule CinemaWeb.Supervisor do
 
   use Supervisor
 
-  def start_link(init_arg \\ []) do
-    Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
+  def start_link(args \\ []) do
+    Supervisor.start_link(__MODULE__, args, name: __MODULE__)
   end
 
   @impl Supervisor
-  def init(_init_arg) do
+  def init(_args) do
     children = [
       CinemaWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:cinema, :dns_cluster_query) || :ignore},

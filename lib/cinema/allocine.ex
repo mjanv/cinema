@@ -18,10 +18,8 @@ defmodule Cinema.Allocine do
 
   @base "https://www.allocine.fr/_/showtimes"
 
-  # AlloCiné rejects requests without a browser-like User-Agent.
   @user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
 
-  # Guards against a pagination bug turning into an unbounded request loop.
   @max_pages 10
 
   @impl Cinema.Source
@@ -72,22 +70,21 @@ defmodule Cinema.Allocine do
   end
 
   defp get_json(url) do
-    case Req.get(url,
-           headers: [{"user-agent", @user_agent}, {"accept", "application/json"}],
-           receive_timeout: 15_000,
-           # Never retry a 429: retrying a rate limit deepens it, and Paris
-           # alone is 75 theaters x 7 days. Transport errors and 5xx still get
-           # one retry.
-           retry: fn _req, resp_or_err ->
-             case resp_or_err do
-               %Req.Response{status: 429} -> false
-               %Req.Response{status: status} when status >= 500 -> true
-               %Req.Response{} -> false
-               _exception -> true
-             end
-           end,
-           max_retries: 1
-         ) do
+    url
+    |> Req.get(
+      headers: [{"user-agent", @user_agent}, {"accept", "application/json"}],
+      receive_timeout: 15_000,
+      retry: fn _req, resp_or_err ->
+        case resp_or_err do
+          %Req.Response{status: 429} -> false
+          %Req.Response{status: status} when status >= 500 -> true
+          %Req.Response{} -> false
+          _exception -> true
+        end
+      end,
+      max_retries: 1
+    )
+    |> case do
       {:ok, %Req.Response{status: 200, body: body}} when is_map(body) ->
         {:ok, body}
 

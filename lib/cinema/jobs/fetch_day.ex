@@ -14,8 +14,6 @@ defmodule Cinema.Jobs.FetchDay do
   use Oban.Worker,
     queue: :allocine,
     max_attempts: 5,
-    # One job per theater and date; a repeat enqueue while one is pending is a
-    # duplicate, not a refresh.
     unique: [
       period: 300,
       fields: [:worker, :args],

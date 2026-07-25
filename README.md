@@ -1,18 +1,35 @@
 # Cinema
 
-To start your Phoenix server:
+Every cinema showtime in a French city or department, on one page.
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+Live at [cinema.premiere-ecoute.fr](https://cinema.premiere-ecoute.fr).
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+The board answers one question — *what can I go and see?* — so it is built like
+a departure board rather than a streaming grid: times are the data, and
+everything else stays out of their way.
 
-Ready to run in production? Please [check our deployment guides](https://phoenix.hexdocs.pm/deployment.html).
+- **Grouped by film or by cinema.** By film answers "where can I see this?", by
+  cinema answers "what's on there?".
+- **A week at a glance**, with today's started screenings dimmed rather than
+  hidden, and a live local clock to read them against.
+- **VF and VOST** colour-coded, on the chips and on the filters that select them.
+- **Any of 21 cities or 99 departments.** Departments are how small towns are
+  reachable: Saint-Brieuc has no page of its own, but Côtes-d'Armor covers it.
+- Click a film to see its whole run across the week, in every cinema showing it.
 
-## Learn more
+## Running it
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://phoenix.hexdocs.pm/overview.html
-* Docs: https://phoenix.hexdocs.pm
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+```bash
+asdf install       # install erlang and elixir
+mix setup          # deps, assets
+mix phx.server     # starts the server
+```
+
+Then [localhost:4000](http://localhost:4000).
+
+```bash
+mix test           # run tests
+mix quality        # compile --warnings-as-errors, format, credo --strict, dialyzer
+mix clean          # format and credo, fixing what it can
+mix audit          # retired packages and security advisories
+```

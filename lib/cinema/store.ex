@@ -17,10 +17,10 @@ defmodule Cinema.Store do
 
   import Ecto.Query
 
+  require Logger
+
   alias Cinema.Cache.Entry
   alias Cinema.Repo
-
-  require Logger
 
   @doc """
   Kept for symmetry with the previous ETS/DETS stores; the Repo owns the
@@ -36,13 +36,12 @@ defmodule Cinema.Store do
   @doc "The value for `key`, if it was written less than `ttl` milliseconds ago."
   @spec fetch(atom(), term(), non_neg_integer() | :infinity) :: {:ok, term()} | :miss
   def fetch(namespace, key, ttl) do
-    query =
-      from(e in Entry,
-        where: e.namespace == ^to_string(namespace) and e.key == ^encode_key(key),
-        select: {e.value, e.stored_at}
-      )
-
-    case Repo.one(query) do
+    from(e in Entry,
+      where: e.namespace == ^to_string(namespace) and e.key == ^encode_key(key),
+      select: {e.value, e.stored_at}
+    )
+    |> Repo.one()
+    |> case do
       {value, stored_at} ->
         if fresh?(stored_at, ttl), do: {:ok, :erlang.binary_to_term(value)}, else: :miss
 
