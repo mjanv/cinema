@@ -31,3 +31,6 @@ config :cinema, Oban, testing: :manual
 
 # No pacing in tests: the stub source makes no network calls.
 config :cinema, Cinema.Jobs.FetchDay, pace_ms: 0
+
+# test_helper.exs migrates once; booting into the sandbox pool would deadlock.
+config :cinema, run_migrations_on_boot: false

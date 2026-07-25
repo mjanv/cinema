@@ -31,6 +31,16 @@ if config_env() == :prod do
 
   config :cinema, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # On disk so a redeploy resumes with a warm cache instead of refetching every
+  # city at once, which is what trips AlloCiné's rate limit. The deploy's rsync
+  # excludes this directory from --delete. Read at runtime so the path can be
+  # overridden without rebuilding the release.
+  config :cinema, Cinema.Repo,
+    database: System.get_env("DATABASE_PATH") || "/opt/cinema/cache/cinema.db",
+    journal_mode: :wal,
+    busy_timeout: 5_000,
+    pool_size: 5
+
   config :cinema, CinemaWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

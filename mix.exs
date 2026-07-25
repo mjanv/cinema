@@ -108,7 +108,10 @@ defmodule Cinema.MixProject do
         "dialyzer"
       ],
       clean: ["format", "credo --strict"],
-      test: ["test"],
+      # ecto.create/migrate before test: the app boots Oban, which verifies its
+      # tables exist, and in test the sandbox pool cannot serve a checkout
+      # early enough for a boot-time migration.
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       audit: ["hex.audit", "deps.unlock --check-unused"]
     ]
   end
