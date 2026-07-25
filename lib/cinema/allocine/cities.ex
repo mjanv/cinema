@@ -121,7 +121,10 @@ defmodule Cinema.Allocine.Cities do
   @doc false
   @spec parse_index(String.t()) :: [City.t()]
   def parse_index(html) when is_binary(html) do
-    ~r|/salle/cinema/(ville-\d+)/[^"]*"[^>]*>\s*([^<]{2,60})|
+    # Both shapes: `ville-` is AlloCiné's 21 headline cities, `departement-` the
+    # 99 departments. Departments are what cover towns with no page of their
+    # own — Saint-Brieuc's only cinema is reachable through Côtes d'Armor.
+    ~r'/salle/cinema/((?:ville|departement)-\d+)/[^"]*"[^>]*>\s*([^<]{2,60})'
     |> Regex.scan(html)
     |> Enum.map(fn [_all, external_id, name] -> City.new(external_id, clean(name)) end)
     |> Enum.reject(&(&1.name == ""))
@@ -133,14 +136,21 @@ defmodule Cinema.Allocine.Cities do
 
   @doc false
   @spec parse_theaters(String.t(), String.t()) :: [Theater.t()]
-  def parse_theaters(html, city_name) when is_binary(html) do
+  def parse_theaters(html, fallback_city) when is_binary(html) do
     # Ids are an opaque alphanumeric code (P0071, W7461, G0699, G06DB). Match
     # the shape rather than a list of prefixes: anchoring on [PW]\d+ silently
     # dropped Véo Cartoucherie from Toulouse.
-    ~r|salle_gen_csalle=([A-Z0-9]+)\.html"[^>]*>\s*([^<]{2,80})|
-    |> Regex.scan(html)
-    |> Enum.map(fn [_all, id, name] ->
-      %Theater{external_id: id, name: clean(name), city: city_name}
+    ~r'salle_gen_csalle=([A-Z0-9]+)\.html"[^>]*>\s*([^<]{2,80})'
+    |> Regex.scan(html, return: :index)
+    |> Enum.map(fn [{start, len}, id_at, name_at] ->
+      %Theater{
+        external_id: slice(html, id_at),
+        name: clean(slice(html, name_at)),
+        # The town comes from this entry's own <address>, so a department page
+        # labels each cinema with where it actually is rather than repeating
+        # the department name 24 times.
+        city: town_after(html, start + len) || fallback_city
+      }
     end)
     |> Enum.reject(&(&1.name == ""))
     |> Enum.uniq_by(& &1.external_id)
@@ -148,10 +158,27 @@ defmodule Cinema.Allocine.Cities do
 
   def parse_theaters(_html, _city_name), do: []
 
+  defp slice(html, {at, len}), do: binary_part(html, at, len)
+
+  # The address follows the theater link; look only a short way ahead so one
+  # entry cannot pick up the next one's town.
+  @address_window 1_500
+
+  defp town_after(html, from) do
+    window = binary_part(html, from, min(@address_window, byte_size(html) - from))
+
+    with [_all, address] <- Regex.run(~r'<address[^>]*>([^<]{5,200})</address>', window),
+         [_all, town] <- Regex.run(~r'\d{5}\s+(.+)$', clean(address)) do
+      String.trim(town)
+    else
+      _no_address -> nil
+    end
+  end
+
   @doc false
   @spec max_page(String.t()) :: pos_integer()
   def max_page(html) when is_binary(html) do
-    ~r|/salle/cinema/ville-\d+/\?page=(\d+)|
+    ~r'/salle/cinema/(?:ville|departement)-\d+/\?page=(\d+)'
     |> Regex.scan(html)
     |> Enum.map(fn [_all, page] -> String.to_integer(page) end)
     |> case do

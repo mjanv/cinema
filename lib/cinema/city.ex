@@ -27,6 +27,20 @@ defmodule Cinema.City do
     %__MODULE__{slug: slug(name), name: name, external_id: external_id}
   end
 
+  @typedoc "Whether this covers one town or a whole department."
+  @type kind :: :city | :department
+
+  @doc """
+  Whether this is a single town or a department.
+
+  Derived from the source's id rather than stored: AlloCiné exposes both under
+  the same page shape, and the distinction only matters for grouping the
+  picker. Anything unrecognised reads as a city.
+  """
+  @spec kind(t()) :: kind()
+  def kind(%__MODULE__{external_id: "departement-" <> _rest}), do: :department
+  def kind(%__MODULE__{}), do: :city
+
   @doc """
   The URL-safe slug for a city name.
 

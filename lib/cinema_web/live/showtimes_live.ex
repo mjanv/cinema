@@ -152,7 +152,20 @@ defmodule CinemaWeb.ShowtimesLive do
       fetched_at: schedule.fetched_at,
       stale?: schedule.stale?
     )
-    |> assign(selected_date: default_date(schedule.days, socket.assigns.now_naive))
+    |> assign(selected_date: keep_or_pick_date(socket, schedule.days))
+  end
+
+  # A background refresh must not move the board: you could be reading
+  # Saturday when a fetch lands. Only pick a new day when the current one is
+  # gone — a different city, or a date that has rolled off the horizon.
+  defp keep_or_pick_date(socket, days) do
+    current = socket.assigns[:selected_date]
+
+    if current && Enum.any?(days, &(&1.date == current)) do
+      current
+    else
+      default_date(days, socket.assigns.now_naive)
+    end
   end
 
   # An explicit ?date= always wins; otherwise open on the most useful day.
@@ -194,9 +207,11 @@ defmodule CinemaWeb.ShowtimesLive do
             <form :if={@city} id="city-picker" class="city-picker" phx-change="select-city">
               <label class="sr-only" for="city">Ville</label>
               <select id="city" name="city">
-                <option :for={city <- @cities} value={city.slug} selected={city.slug == @city.slug}>
-                  {city.name}
-                </option>
+                <optgroup :for={{label, group} <- grouped_cities(@cities)} label={label}>
+                  <option :for={city <- group} value={city.slug} selected={city.slug == @city.slug}>
+                    {city.name}
+                  </option>
+                </optgroup>
               </select>
             </form>
           </h1>
@@ -289,7 +304,9 @@ defmodule CinemaWeb.ShowtimesLive do
             <h3 class="film-day-name">{full_date(day.date)}</h3>
 
             <div :for={venue <- day.theaters} class="venue">
-              <h4 class="venue-name">{venue.name}</h4>
+              <h4 class="venue-name">
+                {venue.name}<span :if={town(venue, @city)} class="town">{town(venue, @city)}</span>
+              </h4>
               <ul class="times">
                 <li :for={screening <- venue.screenings}>
                   <.time_chip screening={screening} now={@now_naive} />
@@ -330,7 +347,9 @@ defmodule CinemaWeb.ShowtimesLive do
                 <.genres list={movie.genres} />
 
                 <div :for={venue <- movie.theaters} class="venue">
-                  <h3 class="venue-name">{venue.name}</h3>
+                  <h3 class="venue-name">
+                    {venue.name}<span :if={town(venue, @city)} class="town">{town(venue, @city)}</span>
+                  </h3>
                   <ul class="times">
                     <li :for={screening <- venue.screenings}>
                       <.time_chip screening={screening} now={@now_naive} />
@@ -347,7 +366,9 @@ defmodule CinemaWeb.ShowtimesLive do
         <% else %>
           <%= for theater <- visible_theaters(@day, @version) do %>
             <section class="theater">
-              <h2 class="theater-name">{theater.name}</h2>
+              <h2 class="theater-name">
+                {theater.name}<span :if={town(theater, @city)} class="town">{town(theater, @city)}</span>
+              </h2>
 
               <article :for={movie <- theater.movies} class="movie">
                 <img
@@ -483,6 +504,24 @@ defmodule CinemaWeb.ShowtimesLive do
   defp empty_reason(:vf), do: "en VF"
   defp empty_reason(:vost), do: "en VOST"
   defp empty_reason(:all), do: ""
+
+  # 21 cities among 99 departments is a list you scroll rather than read, so
+  # the picker groups them. Cities first: they are what most visits want.
+  defp grouped_cities(cities) do
+    by_kind = Enum.group_by(cities, &Cinema.City.kind/1)
+
+    [{"Villes", by_kind[:city]}, {"Départements", by_kind[:department]}]
+    |> Enum.reject(fn {_label, group} -> group in [nil, []] end)
+  end
+
+  # Only worth showing when it differs from the place you selected: on a
+  # department board it says which town to drive to, in Grenoble it would just
+  # repeat "Grenoble" 5 times.
+  defp town(%{town: town}, %{name: name}) when is_binary(town) do
+    if String.starts_with?(town, name) or String.starts_with?(name, town), do: nil, else: town
+  end
+
+  defp town(_venue, _city), do: nil
 
   defp version_class(:vost), do: "is-vost"
   defp version_class(:vf), do: "is-vf"

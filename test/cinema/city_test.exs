@@ -33,6 +33,19 @@ defmodule Cinema.CityTest do
     end
   end
 
+  describe "kind/1" do
+    test "tells a city apart from a department" do
+      # The picker groups them: 21 cities buried among 99 departments is a
+      # list you scroll rather than read.
+      assert City.new("ville-98857", "Grenoble") |> City.kind() == :city
+      assert City.new("departement-83119", "Côtes d'Armor") |> City.kind() == :department
+    end
+
+    test "treats an unrecognised id as a city" do
+      assert City.new(nil, "Ailleurs") |> City.kind() == :city
+    end
+  end
+
   test "new/2 builds a city whose slug is public and whose id stays internal" do
     city = City.new("ville-98857", "Grenoble")
 

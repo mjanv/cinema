@@ -39,7 +39,12 @@ defmodule Cinema.Showtimes do
           screenings: [Screening.t()]
         }
 
-  @type theater :: %{id: String.t(), name: String.t(), movies: [movie()]}
+  @type theater :: %{
+          id: String.t(),
+          name: String.t(),
+          town: String.t() | nil,
+          movies: [movie()]
+        }
   @type day :: %{date: Date.t(), theaters: [theater()]}
 
   @doc """
@@ -234,7 +239,14 @@ defmodule Cinema.Showtimes do
           Map.get(order, theater.external_id, 999)
         end)
         |> Enum.map(fn {theater, _date, screenings} ->
-          %{id: theater.external_id, name: theater.name, movies: group_movies(screenings)}
+          %{
+            id: theater.external_id,
+            name: theater.name,
+            # Carried through so a department board can say which town each
+            # cinema is in; nil for a city, where it would just repeat.
+            town: theater.city,
+            movies: group_movies(screenings)
+          }
         end)
 
       %{date: date, theaters: theaters}
@@ -271,7 +283,12 @@ defmodule Cinema.Showtimes do
       venues =
         pairs
         |> Enum.map(fn {theater, movie} ->
-          %{id: theater.id, name: theater.name, screenings: movie.screenings}
+          %{
+            id: theater.id,
+            name: theater.name,
+            town: theater[:town],
+            screenings: movie.screenings
+          }
         end)
         |> Enum.sort_by(&earliest/1, NaiveDateTime)
 

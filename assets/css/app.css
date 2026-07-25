@@ -602,3 +602,23 @@ a.chip:hover { border-color: var(--paper); }
 /* Film view: no day strip or filters below the title, so the header does not
    need the padding that separated them. */
 .board-head.is-bare { padding-bottom: 0.875rem; }
+
+/* The town a cinema is in — shown only on a department board, where the
+   cinema name alone does not tell you where to drive. */
+.town {
+  color: var(--slate);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-left: 0.4rem;
+  text-transform: none;
+}
+
+/* Optgroup labels inherit the select's dark background; without this they
+   render as near-invisible grey on grey in some browsers. */
+.city-picker optgroup {
+  background: var(--ink);
+  color: var(--slate);
+  font-style: normal;
+  font-weight: 600;
+}

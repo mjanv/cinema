@@ -69,6 +69,12 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     assert has_element?(live, "select#city option[value=lyon]")
   end
 
+  test "groups the picker into cities and departments", %{conn: conn} do
+    {:ok, live, _html} = live(conn, ~p"/")
+
+    assert has_element?(live, ~s(select#city optgroup[label="Villes"] option[value=grenoble]))
+  end
+
   test "switching city loads that city's schedule", %{conn: conn} do
     {:ok, live, html} = live(conn, ~p"/")
     assert html =~ "Toy Story 5"
@@ -213,6 +219,39 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     assert render(live) =~ "Toy Story 5"
   end
 
+  test "keeps the day you are looking at when jobs land", %{conn: conn} do
+    # Background updates must not yank you back to today: you could be reading
+    # Saturday's board when a fetch completes.
+    tomorrow = Cinema.today() |> Date.add(1) |> Date.to_iso8601()
+
+    {:ok, live, _html} = live(conn, ~p"/?date=#{tomorrow}")
+    assert has_element?(live, "button.day.is-current[phx-value-date='#{tomorrow}']")
+
+    send(live.pid, {:schedule_updated, "grenoble"})
+
+    assert has_element?(live, "button.day.is-current[phx-value-date='#{tomorrow}']"),
+           "the selected day must survive a background refresh"
+  end
+
+  test "switching city still lands on a sensible day", %{conn: conn} do
+    tomorrow = Cinema.today() |> Date.add(1) |> Date.to_iso8601()
+
+    {:ok, live, _html} = live(conn, ~p"/?date=#{tomorrow}")
+    live |> form("form.city-picker", city: "lyon") |> render_change()
+
+    # A different city may not even have that date, so it re-picks.
+    assert has_element?(live, "button.day.is-current")
+  end
+
+  test "the refresh button keeps the day you are on", %{conn: conn} do
+    tomorrow = Cinema.today() |> Date.add(1) |> Date.to_iso8601()
+
+    {:ok, live, _html} = live(conn, ~p"/?date=#{tomorrow}")
+    render_click(live, "refresh")
+
+    assert has_element?(live, "button.day.is-current[phx-value-date='#{tomorrow}']")
+  end
+
   test "ignores updates for a city it is not showing", %{conn: conn} do
     {:ok, live, _html} = live(conn, ~p"/")
 
@@ -221,6 +260,14 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     # Still Grenoble's board, not Lyon's.
     assert render(live) =~ "Toy Story 5"
     refute render(live) =~ "Film Lyonnais"
+  end
+
+  test "does not repeat the city name on every cinema", %{conn: conn} do
+    # The stub's theaters are in Grenoble and the board is Grenoble: printing
+    # the town on each would be noise, not information.
+    {:ok, live, _html} = live(conn, ~p"/")
+
+    refute has_element?(live, ".town")
   end
 
   test "regroups by cinema on demand", %{conn: conn} do

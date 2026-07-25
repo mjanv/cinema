@@ -21,6 +21,22 @@ defmodule Cinema.Allocine.CitiesTest do
       assert grenoble.external_id == "ville-98857"
     end
 
+    test "includes departments, not just the headline cities" do
+      # The 21 cities are a shortlist; the 99 departments are what cover towns
+      # like Saint-Brieuc, which has no city page of its own.
+      cities = Cities.parse_index(Cinema.Fixtures.html!("salle_index"))
+
+      names = Enum.map(cities, & &1.name)
+      assert "Côtes d'Armor" in names
+      assert "Finistère" in names
+
+      cotes = Enum.find(cities, &(&1.name == "Côtes d'Armor"))
+      assert cotes.external_id == "departement-83119"
+      assert cotes.slug == "cotes-d-armor"
+
+      assert length(cities) > 100, "21 cities + 99 departments"
+    end
+
     test "returns an empty list rather than raising on unexpected HTML" do
       assert Cities.parse_index("<html><body>nope</body></html>") == []
     end
@@ -33,7 +49,9 @@ defmodule Cinema.Allocine.CitiesTest do
         |> Cities.parse_theaters("Lyon")
 
       assert Enum.all?(theaters, &match?(%Theater{}, &1))
-      assert Enum.all?(theaters, &(&1.city == "Lyon"))
+      # Each theater carries its own town from its address, which in Lyon is
+      # the arrondissement — more precise than the page name, not wrong.
+      assert Enum.all?(theaters, &(&1.city =~ "Lyon"))
       assert length(theaters) > 5
 
       assert "P0005" in Enum.map(theaters, & &1.external_id)
@@ -58,6 +76,26 @@ defmodule Cinema.Allocine.CitiesTest do
       ids = html |> Cities.parse_theaters("Toulouse") |> Enum.map(& &1.external_id)
 
       assert Enum.sort(ids) == ["G0699", "G06DB", "P0071", "W7461"]
+    end
+
+    test "reads each theater's own town, not the page it was listed on" do
+      # On a department page every cinema would otherwise be labelled
+      # "Côtes d'Armor", which tells you nothing about where to drive.
+      html = """
+      <h2 class="title"><a href="/seance/salle_gen_csalle=P0314.html">Club 6</a></h2>
+      <address class="address">40, bd Clemenceau 22000 Saint-Brieuc</address>
+      """
+
+      assert [theater] = Cities.parse_theaters(html, "Côtes d'Armor")
+      assert theater.name == "Club 6"
+      assert theater.city == "Saint-Brieuc"
+    end
+
+    test "falls back to the page name when no address is given" do
+      html = ~s(<a href="/seance/salle_gen_csalle=P0314.html">Club 6</a>)
+
+      assert [theater] = Cities.parse_theaters(html, "Côtes d'Armor")
+      assert theater.city == "Côtes d'Armor"
     end
 
     test "deduplicates a theater linked more than once on the page" do
@@ -96,6 +134,14 @@ defmodule Cinema.Allocine.CitiesTest do
   describe "max_page/1" do
     test "reads how many pages of theaters a city has" do
       assert Cities.max_page(Cinema.Fixtures.html!("ville_lyon_page1")) == 2
+    end
+
+    test "follows pagination on a department page too" do
+      # Departments hold more cinemas than a city and routinely span pages;
+      # matching only ville- silently truncated them to the first page.
+      html = ~s(<a href="/salle/cinema/departement-83119/?page=2">2</a>)
+
+      assert Cities.max_page(html) == 2
     end
 
     test "defaults to a single page when there is no pagination" do
