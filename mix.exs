@@ -83,7 +83,12 @@ defmodule Cinema.MixProject do
       setup: ["deps.get", "assets.setup", "assets.build"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind cinema", "esbuild cinema"],
+      # compile first: the Elixir compiler emits
+      # _build/$MIX_ENV/phoenix-colocated/cinema/colocated.css, which app.css
+      # imports. Without it tailwind fails to resolve that import on a clean
+      # checkout (CI), even though a local _build makes it look fine.
       "assets.deploy": [
+        "compile",
         "tailwind cinema --minify",
         "esbuild cinema --minify",
         "phx.digest"

@@ -60,10 +60,7 @@ jobs:
           MIX_ENV: test
 
       - name: Deploy assets
-        run: |
-          mix tailwind cinema --minify
-          mix esbuild cinema --minify
-          mix phx.digest
+        run: mix assets.deploy
         env:
           MIX_ENV: prod
 
@@ -108,7 +105,10 @@ jobs:
           rsync -avzq --delete --exclude='.env' _build/prod/rel/cinema/ root@${{ vars.DO_HOST }}:/opt/cinema/
           scp .env.production root@${{ vars.DO_HOST }}:/opt/cinema/.env
           # Cinema owns exactly this one file in the shared Traefik directory.
-          scp apps/digital_ocean/traefik/cinema.yml root@${{ vars.DO_HOST }}:/opt/traefik/dynamic/cinema.yml
+          # Stage then install as traefik: the directory is watched, so a
+          # root-owned file even briefly makes Traefik skip it.
+          scp apps/digital_ocean/traefik/cinema.yml root@${{ vars.DO_HOST }}:/tmp/cinema.yml
+          ssh root@${{ vars.DO_HOST }} 'install -m 0644 -o traefik -g traefik /tmp/cinema.yml /opt/traefik/dynamic/cinema.yml && rm -f /tmp/cinema.yml'
           ssh root@${{ vars.DO_HOST }} '
             chown -R cinema:cinema /opt/cinema
             chmod 600 /opt/cinema/.env

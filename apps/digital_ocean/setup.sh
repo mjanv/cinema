@@ -41,8 +41,11 @@ if ! grep -q 'directory: /opt/traefik/dynamic' /opt/traefik/traefik.yml 2>/dev/n
 fi
 
 mkdir -p "${TRAEFIK_DIR}"
-install -m 0644 "$(dirname "$0")/traefik/cinema.yml" "${TRAEFIK_DIR}/cinema.yml"
-chown -R traefik:traefik /opt/traefik 2>/dev/null || true
+# Own it at install time, not afterwards: Traefik watches the directory and
+# re-reads the moment the file appears, so a root-owned file in between logs a
+# permission error and is skipped until the next change.
+install -m 0644 -o traefik -g traefik \
+  "$(dirname "$0")/traefik/cinema.yml" "${TRAEFIK_DIR}/cinema.yml"
 echo "    installed ${TRAEFIK_DIR}/cinema.yml (watched; no restart needed)"
 
 cat <<'NEXT'
