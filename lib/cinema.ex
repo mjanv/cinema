@@ -88,6 +88,14 @@ defmodule Cinema do
   defdelegate commit(), to: Cinema.Version
 
   @doc """
+  One film's whole run across the schedule: every day it plays, and where.
+
+  Returns nil when the film is not showing in the given days.
+  """
+  @spec film([day()], String.t()) :: map() | nil
+  defdelegate film(days, title), to: Showtimes
+
+  @doc """
   Which day the board should open on: today, unless its programme is spent.
 
   Once the last screening of the day started over half an hour ago, tomorrow is

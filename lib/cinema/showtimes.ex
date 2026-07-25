@@ -265,6 +265,39 @@ defmodule Cinema.Showtimes do
   defp presence([]), do: nil
   defp presence(list), do: list
 
+  @doc """
+  One film's whole run: every day it plays, and where, across the schedule.
+
+  Answers "when can I catch this at all?" rather than "what is on today". Days
+  with no showing are dropped, so the result is only the dates that matter.
+  Returns nil when the film is not in the schedule.
+  """
+  @spec film([day()], String.t()) :: map() | nil
+  def film(days, title) do
+    matching =
+      days
+      |> Enum.map(fn day -> {day.date, Enum.find(by_movie(day), &(&1.title == title))} end)
+      |> Enum.reject(fn {_date, movie} -> is_nil(movie) end)
+
+    case matching do
+      [] ->
+        nil
+
+      [{_date, first} | _rest] ->
+        %{
+          title: first.title,
+          original_title: first.original_title,
+          runtime_min: first.runtime_min,
+          genres: first.genres,
+          poster_url: first.poster_url,
+          days:
+            Enum.map(matching, fn {date, movie} ->
+              %{date: date, theaters: movie.theaters}
+            end)
+        }
+    end
+  end
+
   defp group_movies(screenings) do
     screenings
     |> Enum.group_by(& &1.title)

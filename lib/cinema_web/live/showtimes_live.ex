@@ -25,6 +25,7 @@ defmodule CinemaWeb.ShowtimesLive do
      |> assign(
        cities: Cinema.cities(),
        city: nil,
+       film: nil,
        days: [],
        selected_date: nil,
        fetched_at: nil,
@@ -48,13 +49,14 @@ defmodule CinemaWeb.ShowtimesLive do
         nil ->
           # No city at all: the source is unreachable on a cold cache. Render an
           # explicit message rather than a half-built board.
-          assign(socket, city: nil, days: [], selected_date: nil)
+          assign(socket, city: nil, days: [], selected_date: nil, film: nil)
 
         city ->
           socket = if city == socket.assigns.city, do: socket, else: load_days(socket, city)
 
           assign(socket,
-            selected_date: selected_date(params, socket.assigns.days, socket.assigns.now_naive)
+            selected_date: selected_date(params, socket.assigns.days, socket.assigns.now_naive),
+            film: params["film"] && Cinema.film(socket.assigns.days, params["film"])
           )
       end
 
@@ -67,6 +69,10 @@ defmodule CinemaWeb.ShowtimesLive do
 
   def handle_event("select-day", %{"date" => date}, socket) do
     {:noreply, push_patch(socket, to: ~p"/?#{[city: socket.assigns.city.slug, date: date]}")}
+  end
+
+  def handle_event("close-film", _params, socket) do
+    {:noreply, push_patch(socket, to: board_path(socket))}
   end
 
   def handle_event("select-city", %{"city" => slug}, socket) do
@@ -92,6 +98,19 @@ defmodule CinemaWeb.ShowtimesLive do
 
     {:noreply, socket}
   end
+
+  defp board_path(socket) do
+    params = [city: socket.assigns.city.slug]
+
+    params =
+      if socket.assigns.selected_date,
+        do: params ++ [date: Date.to_iso8601(socket.assigns.selected_date)],
+        else: params
+
+    ~p"/?#{params}"
+  end
+
+  defp film_path(city, title), do: ~p"/?#{[city: city.slug, film: title]}"
 
   defp load_days(socket, city, opts \\ []) do
     schedule = if opts[:refresh], do: Cinema.refresh(city), else: Cinema.schedule(city)
@@ -138,7 +157,7 @@ defmodule CinemaWeb.ShowtimesLive do
 
     ~H"""
     <div class="board">
-      <header class="board-head">
+      <header class={["board-head", @film && "is-bare"]}>
         <div class="board-title">
           <h1>
             <span class="board-title-text">Séances à</span>
@@ -162,7 +181,9 @@ defmodule CinemaWeb.ShowtimesLive do
           </div>
         </div>
 
-        <nav class="days" aria-label="Choisir un jour">
+        <%!-- The day strip and filters act on the board only: the film view
+              spans every day and shows one film, so neither applies there. --%>
+        <nav :if={is_nil(@film)} class="days" aria-label="Choisir un jour">
           <button
             :for={day <- @days}
             class={["day", day.date == @selected_date && "is-current"]}
@@ -175,7 +196,7 @@ defmodule CinemaWeb.ShowtimesLive do
           </button>
         </nav>
 
-        <div class="controls">
+        <div :if={is_nil(@film)} class="controls">
           <div class="versions" role="group" aria-label="Filtrer par version">
             <button
               :for={{label, value} <- [{"Tout", :all}, {"VF", :vf}, {"VOST", :vost}]}
@@ -206,7 +227,50 @@ defmodule CinemaWeb.ShowtimesLive do
         </p>
       </main>
 
-      <main :if={@city}>
+      <main :if={@city && @film}>
+        <button class="back" phx-click="close-film">
+          <span class="back-arrow" aria-hidden="true">←</span>
+          <span>Toutes les séances</span>
+        </button>
+
+        <article class="film">
+          <div class="film-head">
+            <img
+              :if={@film.poster_url}
+              class="poster poster-lg"
+              src={@film.poster_url}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              width="120"
+              height="160"
+            />
+            <div class="film-meta">
+              <h2 class="film-title">{@film.title}</h2>
+              <p :if={@film.original_title && @film.original_title != @film.title} class="film-orig">
+                {@film.original_title}
+              </p>
+              <p :if={@film.runtime_min} class="movie-meta">{runtime(@film.runtime_min)}</p>
+              <.genres list={@film.genres} />
+            </div>
+          </div>
+
+          <section :for={day <- @film.days} class="film-day">
+            <h3 class="film-day-name">{full_date(day.date)}</h3>
+
+            <div :for={venue <- day.theaters} class="venue">
+              <h4 class="venue-name">{venue.name}</h4>
+              <ul class="times">
+                <li :for={screening <- venue.screenings}>
+                  <.time_chip screening={screening} now={@now_naive} />
+                </li>
+              </ul>
+            </div>
+          </section>
+        </article>
+      </main>
+
+      <main :if={@city && is_nil(@film)}>
         <%= if @group_by == :movie do %>
           <section :for={movie <- by_movie(@day, @version)} class="theater">
             <div class="movie movie-lead">
@@ -225,7 +289,11 @@ defmodule CinemaWeb.ShowtimesLive do
 
               <div class="movie-body">
                 <div class="movie-head">
-                  <h2 class="movie-title">{movie.title}</h2>
+                  <h2 class="movie-title">
+                    <.link patch={film_path(@city, movie.title)} class="movie-link">
+                      {movie.title}
+                    </.link>
+                  </h2>
                   <span :if={movie.runtime_min} class="movie-meta">{runtime(movie.runtime_min)}</span>
                 </div>
 
@@ -267,7 +335,11 @@ defmodule CinemaWeb.ShowtimesLive do
 
                 <div class="movie-body">
                   <div class="movie-head">
-                    <h3 class="movie-title">{movie.title}</h3>
+                    <h3 class="movie-title">
+                      <.link patch={film_path(@city, movie.title)} class="movie-link">
+                        {movie.title}
+                      </.link>
+                    </h3>
                     <span :if={movie.runtime_min} class="movie-meta">{runtime(movie.runtime_min)}</span>
                   </div>
 

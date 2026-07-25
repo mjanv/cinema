@@ -518,3 +518,87 @@ a.chip:hover { border-color: var(--paper); }
   font-size: 0.625rem;
   letter-spacing: 0;
 }
+
+/* ---------------------------------------------------------------------
+   Film view: one film's whole run across the week.
+   --------------------------------------------------------------------- */
+
+.movie-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.movie-link:hover { border-bottom-color: var(--slate); }
+
+/* Reads as a control, not a hyperlink: bordered, thumb-sized, and the only
+   way out of this view now that the day strip is hidden. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: color-mix(in srgb, var(--vost) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--paper) 40%, transparent);
+  border-radius: 999px;
+  color: var(--paper);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin: 1rem 0 0.25rem;
+  padding: 0.45rem 0.9rem;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.back:hover {
+  background: color-mix(in srgb, var(--vost) 22%, transparent);
+  border-color: var(--paper);
+}
+
+.back:active { transform: translateY(1px); }
+
+.back-arrow { font-size: 0.9375rem; line-height: 1; }
+
+.film-head {
+  display: flex;
+  gap: 0.875rem;
+  padding: 0.5rem 0 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.poster-lg { width: 7.5rem; height: 10rem; flex: 0 0 auto; }
+
+.film-meta { min-width: 0; }
+
+.film-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.film-orig {
+  color: var(--slate);
+  font-size: 0.8125rem;
+  font-style: italic;
+  margin: 0.2rem 0 0;
+}
+
+.film-meta .movie-meta { display: block; margin: 0.35rem 0 0; }
+
+.film-day { margin-top: 1.5rem; }
+
+/* The date leads here: you are scanning for a day, not a cinema. */
+.film-day-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--paper);
+  margin: 0 0 0.625rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent);
+  text-transform: capitalize;
+}
+
+/* Film view: no day strip or filters below the title, so the header does not
+   need the padding that separated them. */
+.board-head.is-bare { padding-bottom: 0.875rem; }

@@ -8,8 +8,9 @@ release, and neither app's deploy can break the other.
 
 - The droplet is already provisioned by Première Écoute's `setup.sh`
   (Traefik, Let's Encrypt, UFW, SSH). This guide does **not** repeat that.
-- Traefik must already use the directory provider — deploy Première Écoute at
-  least once after its `traefik.yml` switched to `directory:`.
+- Traefik must use the directory provider (`directory: /opt/traefik/dynamic`).
+  Already applied on the droplet; the matching config is committed in the
+  premiere-ecoute repo so its own deploys stay consistent.
 - DNS: `cinema.premiere-ecoute.fr` A record → the droplet IP.
 
 ## Architecture
@@ -26,7 +27,7 @@ Everything is namespaced away from the other app: systemd unit `cinema`,
 release node `cinema` (an sname collision would stop the second app booting),
 port 4001, and its own service account.
 
-There is **no database**. The schedule is scraped from AlloCiné and held in
+There is **no database**. The schedule is fetched from AlloCiné and held in
 ETS with a 30-minute TTL, so there are no migrations and nothing to back up —
 losing the cache costs one refetch.
 
@@ -84,6 +85,9 @@ A healthy boot logs the cache warm:
 [info] Showtimes cache warmed: 7 days, 24 theaters, 242ms
 ```
 
+The page footer shows the short commit SHA of the running build, so you can
+confirm a deploy landed without opening the Actions log.
+
 ## Management
 
 ```bash
@@ -94,9 +98,10 @@ ssh root@<DROPLET_IP> '/opt/cinema/bin/cinema remote'   # IEx on the running nod
 
 ## Resource budget
 
-The unit caps the app at `MemoryMax=150M` / `CPUQuota=40%`. On a 1 GB droplet
-already running PostgreSQL, SeaweedFS, Traefik and Première Écoute's 600 MB
-allocation, check headroom before and after the first deploy:
+The unit caps the app at `MemoryMax=300M` / `CPUQuota=40%`. The droplet has
+~2 GB with ~1 GB free while running PostgreSQL, SeaweedFS, Traefik and
+Première Écoute. Measured idle usage is ~115 MB after warming 7 days of
+showtimes. Check headroom after a deploy:
 
 ```bash
 ssh root@<DROPLET_IP> 'free -m; systemctl show cinema -p MemoryCurrent'
@@ -108,12 +113,21 @@ restart the service.
 
 ## Caveats
 
-**The data source is undocumented.** Cinema scrapes AlloCiné's internal
-endpoint (`/_/showtimes/theater-{id}/d-{date}/`). It can change without notice.
-Parsing is isolated in `Cinema.Allocine.Parser` and covered by tests against
-saved fixtures in `test/support/fixtures/`; if the board empties, look there
-first. A failed fetch keeps the last good schedule and marks it stale in the
-footer rather than blanking the page.
+**The data sources are undocumented.** Two different mechanisms, both
+unofficial and both able to change without notice:
+
+| Data | Mechanism | Parsed by |
+|------|-----------|-----------|
+| Showtimes | JSON API, `/_/showtimes/theater-{id}/d-{date}/` | `Cinema.Allocine.Parser` |
+| Cities & theaters | HTML scraping of `/salle/` | `Cinema.Allocine.Cities` |
+
+Both are covered by tests against saved fixtures in `test/support/fixtures/`;
+if the board empties, look there first. The JSON API is the more stable of the
+two — it returns structured fields — whereas the city list depends on page
+markup, which is why `Cities` also ships a built-in fallback list.
+
+A failed fetch keeps the last good schedule and marks it stale in the footer
+rather than blanking the page.
 
 **Do not make this public.** `robots.txt` disallows everything and the layout
 sends `noindex, nofollow`, which keeps a personal tool from becoming a search-

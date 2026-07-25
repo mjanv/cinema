@@ -180,6 +180,76 @@ defmodule Cinema.ShowtimesTest do
     end
   end
 
+  describe "film/2" do
+    defp day_for(date, entries) do
+      %{
+        date: Date.from_iso8601!(date),
+        theaters:
+          for {theater_id, name, title, times} <- entries do
+            %{
+              id: theater_id,
+              name: name,
+              movies: [
+                %{
+                  title: title,
+                  original_title: nil,
+                  runtime_min: 120,
+                  genres: ["Drame"],
+                  poster_url: "p.jpg",
+                  versions: [:vf],
+                  screenings:
+                    Enum.map(times, &screening(theater_id, name, title, "#{date}T#{&1}"))
+                }
+              ]
+            }
+          end
+      }
+    end
+
+    test "collects one film's screenings across every day, keeping days in order" do
+      days = [
+        day_for("2026-07-26", [{"T1", "Cinéma Un", "L'Odyssée", ["14:00:00", "20:00:00"]}]),
+        day_for("2026-07-27", [{"T2", "Cinéma Deux", "L'Odyssée", ["18:00:00"]}])
+      ]
+
+      assert %{} = film = Showtimes.film(days, "L'Odyssée")
+
+      assert film.title == "L'Odyssée"
+      assert film.runtime_min == 120
+      assert film.genres == ["Drame"]
+      assert Enum.map(film.days, & &1.date) == [~D[2026-07-26], ~D[2026-07-27]]
+    end
+
+    test "groups each day's screenings by cinema" do
+      days = [
+        day_for("2026-07-26", [
+          {"T1", "Cinéma Un", "L'Odyssée", ["14:00:00"]},
+          {"T2", "Cinéma Deux", "L'Odyssée", ["20:00:00"]}
+        ])
+      ]
+
+      assert %{days: [day]} = Showtimes.film(days, "L'Odyssée")
+      assert Enum.map(day.theaters, & &1.name) == ["Cinéma Un", "Cinéma Deux"]
+    end
+
+    test "omits days on which the film is not showing" do
+      days = [
+        day_for("2026-07-26", [{"T1", "Cinéma Un", "L'Odyssée", ["14:00:00"]}]),
+        day_for("2026-07-27", [{"T1", "Cinéma Un", "Autre film", ["18:00:00"]}])
+      ]
+
+      assert %{days: [only]} = Showtimes.film(days, "L'Odyssée")
+      assert only.date == ~D[2026-07-26]
+    end
+
+    test "returns nil for a film that is not in the schedule at all" do
+      days = [day_for("2026-07-26", [{"T1", "Cinéma Un", "L'Odyssée", ["14:00:00"]}])]
+
+      assert Showtimes.film(days, "Film inexistant") == nil
+      assert Showtimes.film([], "L'Odyssée") == nil
+    end
+  end
+
   describe "cache" do
     setup do
       # These exercise the shared ETS cache, so they must not run concurrently.

@@ -144,6 +144,51 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     assert html =~ Cinema.commit()
   end
 
+  test "clicking a film title shows its run across every day", %{conn: conn} do
+    {:ok, live, _html} = live(conn, ~p"/")
+
+    html = live |> element("a.movie-link", "Toy Story 5") |> render_click()
+
+    assert html =~ ~s(class="film")
+    assert html =~ "Toy Story 5"
+    # The stub programmes it on all three days, each listed with its cinema.
+    assert html =~ "film-day-name"
+    refute html =~ "Kill Bill", "the film view shows one film, not the board"
+  end
+
+  test "hides the day strip and filters in the film view", %{conn: conn} do
+    {:ok, live, _html} = live(conn, ~p"/?city=grenoble&film=Toy+Story+5")
+
+    # Neither acts on this view: it spans every day and shows one film.
+    refute has_element?(live, "nav.days")
+    refute has_element?(live, ".controls")
+    # The title, clock and refresh remain useful and stay.
+    assert has_element?(live, ".clock")
+    assert has_element?(live, "button.refresh")
+
+    html = live |> element("button.back") |> render_click()
+    assert html =~ ~s(class="days")
+    assert html =~ ~s(class="controls")
+  end
+
+  test "the film view is addressable and reversible", %{conn: conn} do
+    {:ok, _live, html} = live(conn, ~p"/?city=grenoble&film=Toy+Story+5")
+    assert html =~ ~s(class="film")
+
+    {:ok, live, _html} = live(conn, ~p"/?city=grenoble&film=Toy+Story+5")
+    html = live |> element("button.back") |> render_click()
+
+    refute html =~ ~s(class="film-head")
+    assert html =~ "Kill Bill", "back returns to the full board"
+  end
+
+  test "an unknown film falls back to the board rather than erroring", %{conn: conn} do
+    {:ok, _live, html} = live(conn, ~p"/?city=grenoble&film=Film+Inexistant")
+
+    refute html =~ ~s(class="film-head")
+    assert html =~ "Toy Story 5"
+  end
+
   test "regroups by cinema on demand", %{conn: conn} do
     {:ok, live, _html} = live(conn, ~p"/")
 

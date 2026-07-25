@@ -162,8 +162,8 @@ ssh root@68.183.219.251 'systemctl stop cinema && rm -rf /opt/cinema && mv /opt/
 The droplet, CI and `.tool-versions` are all on 29.0.2 / 1.20.2. If you upgrade
 the droplet, update `.tool-versions` and the workflow together.
 
-**Nothing to back up.** No database. The schedule is scraped into ETS with a
-30-minute TTL; losing it costs one refetch.
+**Nothing to back up.** No database. The schedule is fetched from AlloCiné's
+JSON API into ETS with a 30-minute TTL; losing it costs one refetch.
 
 **Isolation.** Distinct systemd unit, user, port (4001), release node name and
 `/opt` directory. Each app owns one file in `/opt/traefik/dynamic/`, so neither
