@@ -160,7 +160,10 @@ defmodule Cinema.Showtimes do
     source = config(:source, Cinema.Allocine)
     theaters = source.theaters(city)
 
-    FetchDay.enqueue(city, days: days, today: today)
+    # Only queue what is actually missing. Enqueueing unconditionally made this
+    # self-sustaining: a finished job broadcasts, the page reloads with
+    # refresh: true, and that queued the same work again.
+    FetchDay.enqueue_missing(city, theaters, today, days)
 
     build(theaters, &fetch_cached(city, &1, &2), today, days)
   end

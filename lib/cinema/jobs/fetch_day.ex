@@ -49,10 +49,11 @@ defmodule Cinema.Jobs.FetchDay do
     today = Keyword.get(opts, :today, Cinema.today())
     source = source()
 
+    # Day-major, same reason as enqueue_missing/4.
     jobs =
-      for theater <- source.theaters(city),
-          offset <- 0..(days - 1),
-          date = Date.add(today, offset) do
+      for offset <- 0..(days - 1),
+          date = Date.add(today, offset),
+          theater <- source.theaters(city) do
         new(%{
           city_slug: city.slug,
           theater_id: theater.external_id,
@@ -63,6 +64,33 @@ defmodule Cinema.Jobs.FetchDay do
     queued = jobs |> Enum.map(&Oban.insert/1) |> Enum.count(&match?({:ok, _job}, &1))
 
     {:ok, queued}
+  end
+
+  @doc """
+  Queues jobs only for theater/date pairs with no fresh cache entry.
+
+  `enqueue/2` queues everything, which is right for a deliberate refresh but
+  loops when called from a job-completion handler: the new jobs finish, the
+  page reloads, and the same work is queued again.
+  """
+  @spec enqueue_missing(City.t(), [struct()], Date.t(), pos_integer()) :: {:ok, non_neg_integer()}
+  def enqueue_missing(%City{} = city, theaters, today, days) do
+    # Day-major: every cinema gets today before any gets tomorrow. At a queue
+    # limit of 1 the opposite order fetches one cinema's whole week first,
+    # leaving the board half-empty for minutes on a large city.
+    jobs =
+      for offset <- 0..(days - 1),
+          date = Date.add(today, offset),
+          theater <- theaters,
+          fetched(city, theater.external_id, date) == :miss do
+        new(%{
+          city_slug: city.slug,
+          theater_id: theater.external_id,
+          date: Date.to_iso8601(date)
+        })
+      end
+
+    {:ok, jobs |> Enum.map(&Oban.insert/1) |> Enum.count(&match?({:ok, _job}, &1))}
   end
 
   @doc "Screenings already fetched for a theater on a date, if still fresh."
