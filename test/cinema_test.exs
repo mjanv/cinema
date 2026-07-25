@@ -2,7 +2,11 @@ defmodule CinemaTest do
   # Shares the ETS cache with Cinema.ShowtimesTest.
   use ExUnit.Case, async: false
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   setup do
+    pid = Sandbox.start_owner!(Cinema.Repo, shared: true)
+    on_exit(fn -> Sandbox.stop_owner(pid) end)
     Cinema.reset_cache()
     {:ok, city: Cinema.find_city(nil)}
   end
@@ -21,7 +25,11 @@ defmodule CinemaTest do
   end
 
   test "by_movie/1 regroups a day around films", %{city: city} do
-    %{days: [day | _]} = Cinema.schedule(city, days: 1)
+    # Fetching is queued now, so drain it before asserting on content.
+    Cinema.schedule(city, days: 1)
+    Oban.drain_queue(queue: :allocine)
+
+    %{days: [day | _]} = Cinema.schedule(city, days: 1, refresh: true)
 
     assert [movie | _] = Cinema.by_movie(day)
     assert %{title: title, theaters: [_ | _]} = movie

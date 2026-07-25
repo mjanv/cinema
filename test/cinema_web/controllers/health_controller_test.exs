@@ -1,5 +1,5 @@
 defmodule CinemaWeb.HealthControllerTest do
-  use CinemaWeb.ConnCase, async: true
+  use CinemaWeb.ConnCase, async: false
 
   test "reports ok so the deploy health check can gate a rollback", %{conn: conn} do
     conn = get(conn, ~p"/health")

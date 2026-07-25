@@ -5,8 +5,6 @@ defmodule Cinema.Application do
 
   @impl true
   def start(_type, _args) do
-    Cinema.init_cache()
-
     children = [
       Cinema.Supervisor,
       CinemaWeb.Supervisor

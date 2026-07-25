@@ -42,6 +42,33 @@ config :logger, :default_formatter,
 
 config :phoenix, :json_library, Jason
 
+config :cinema, ecto_repos: [Cinema.Repo]
+
+config :cinema, Cinema.Repo,
+  database: Path.expand("../priv/cinema_dev.db", __DIR__),
+  pool_size: 5,
+  # The cache is written from several request processes at once; WAL lets a
+  # reader proceed while a writer is mid-transaction.
+  journal_mode: :wal,
+  busy_timeout: 5_000
+
+config :cinema, Oban,
+  engine: Oban.Engines.Lite,
+  # SQLite has no LISTEN/NOTIFY; the PG notifier is the default and would fail
+  # to load.
+  notifier: Oban.Notifiers.PG,
+  repo: Cinema.Repo,
+  queues: [
+    # AlloCiné rate-limits by IP. One at a time, and the worker sleeps between
+    # fetches: concurrency alone is not a rate, since each request finishes in
+    # ~150ms. See @pace_ms in Cinema.Jobs.FetchDay.
+    allocine: [limit: 1]
+  ],
+  plugins: [
+    # Finished jobs are only useful for a short while after the fact.
+    {Oban.Plugins.Pruner, max_age: 3600}
+  ]
+
 config :cinema, Cinema.Showtimes,
   source: Cinema.Allocine,
   days: 7,

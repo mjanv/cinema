@@ -30,19 +30,12 @@ defmodule Cinema.Allocine.Cities do
   require Logger
 
   @doc false
-  def init_cache do
-    :ets.new(@cache, [:named_table, :public, :set, read_concurrency: true])
-  rescue
-    ArgumentError -> @cache
-  end
+  def init_cache, do: Cinema.Store.open(@cache)
 
   @doc false
   def reset_cache do
     init_cache()
-    :ets.delete_all_objects(@cache)
-    :ok
-  rescue
-    ArgumentError -> :ok
+    Cinema.Store.clear(@cache)
   end
 
   # AlloCiné's own directory, captured. The city list is effectively static, so
@@ -217,31 +210,25 @@ defmodule Cinema.Allocine.Cities do
   defp city_url(slug, page), do: "#{@city_url}/#{slug}/?page=#{page}"
 
   defp cached(key, fun) do
-    case :ets.lookup(@cache, key) do
-      [{^key, value, stored_at}] ->
-        if System.monotonic_time(:millisecond) - stored_at < @ttl do
-          value
-        else
-          store(key, fun.())
-        end
-
-      [] ->
-        store(key, fun.())
+    case Cinema.Store.fetch(@cache, key, @ttl) do
+      {:ok, value} -> value
+      :miss -> store(key, fun.())
     end
-  rescue
-    ArgumentError -> fun.()
   end
 
-  # An empty result means the fetch failed. Cache it briefly anyway: retrying on
-  # every page load is what earns a 429 in the first place. A short TTL means we
-  # recover quickly once AlloCiné is happy again, without hammering it.
+  # An empty result means the fetch failed. Remember it briefly anyway: retrying
+  # on every page load is what earns a 429 in the first place. Backdating the
+  # entry gives it the shorter failure TTL without a second timestamp field.
   defp store(key, []) do
-    :ets.insert(@cache, {key, [], System.monotonic_time(:millisecond) - @ttl + @failure_ttl})
+    Cinema.Store.put(@cache, key, [],
+      stored_at: System.os_time(:millisecond) - @ttl + @failure_ttl
+    )
+
     []
   end
 
   defp store(key, value) do
-    :ets.insert(@cache, {key, value, System.monotonic_time(:millisecond)})
+    Cinema.Store.put(@cache, key, value)
     value
   end
 

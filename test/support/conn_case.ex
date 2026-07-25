@@ -17,6 +17,8 @@ defmodule CinemaWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   using do
     quote do
       # The default endpoint for testing
@@ -31,7 +33,22 @@ defmodule CinemaWeb.ConnCase do
     end
   end
 
-  setup _tags do
+  setup tags do
+    pid = Sandbox.start_owner!(Cinema.Repo, shared: not tags[:async])
+    on_exit(fn -> Sandbox.stop_owner(pid) end)
+
+    # Fetching is queued now, so tests that render a board must run the jobs
+    # first. Opt in with `@moduletag :schedule` — a plain view test does not
+    # need the round trip.
+    if tags[:schedule] do
+      # First pass queues the jobs, the drain runs them, the refresh rebuilds
+      # the schedule from what they cached. Without the refresh the board keeps
+      # serving the empty entry written before the jobs landed.
+      for city <- Cinema.cities(), do: Cinema.schedule(city)
+      Oban.drain_queue(queue: :allocine)
+      for city <- Cinema.cities(), do: Cinema.refresh(city)
+    end
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

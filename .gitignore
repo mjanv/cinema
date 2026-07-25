@@ -44,3 +44,8 @@ npm-debug.log
 # Dialyzer PLTs are build artifacts (already covered by /_build).
 *.plt
 *.plt.hash
+
+# SQLite databases and their WAL sidecars — local cache, never committed.
+/priv/*.db
+/priv/*.db-shm
+/priv/*.db-wal

@@ -8,6 +8,9 @@ defmodule CinemaWeb.ShowtimesLive do
 
   use CinemaWeb, :live_view
 
+  alias Cinema.Jobs.Notifier
+  alias Phoenix.PubSub
+
   # The clock only needs to be right to the minute; ticking every 30s keeps it
   # from lagging visibly after a minute rolls over.
   @tick_ms 30_000
@@ -36,6 +39,28 @@ defmodule CinemaWeb.ShowtimesLive do
   @impl true
   def handle_info(:tick, socket), do: {:noreply, assign_now(socket)}
 
+  # Fetching is asynchronous: a cold city renders empty and fills in as its
+  # jobs finish. The notifier coalesces a burst into one message.
+  def handle_info({:schedule_updated, slug}, %{assigns: %{city: %{slug: slug}}} = socket) do
+    {:noreply, load_days(socket, socket.assigns.city, refresh: true)}
+  end
+
+  def handle_info({:schedule_updated, _other_city}, socket), do: {:noreply, socket}
+
+  # Only a connected LiveView should hold a subscription; the static render is
+  # a one-shot that never receives anything.
+  defp resubscribe(socket, city) do
+    if connected?(socket) do
+      if previous = socket.assigns.city do
+        PubSub.unsubscribe(Cinema.PubSub, "schedule:#{previous.slug}")
+      end
+
+      Notifier.subscribe(city.slug)
+    end
+
+    socket
+  end
+
   # Screenings carry naive local times, so keep a naive copy to compare against.
   defp assign_now(socket) do
     now = Cinema.now()
@@ -52,7 +77,12 @@ defmodule CinemaWeb.ShowtimesLive do
           assign(socket, city: nil, days: [], selected_date: nil, film: nil)
 
         city ->
-          socket = if city == socket.assigns.city, do: socket, else: load_days(socket, city)
+          socket =
+            if city == socket.assigns.city do
+              socket
+            else
+              socket |> resubscribe(city) |> load_days(city)
+            end
 
           assign(socket,
             selected_date: selected_date(params, socket.assigns.days, socket.assigns.now_naive),
@@ -312,7 +342,7 @@ defmodule CinemaWeb.ShowtimesLive do
           </section>
 
           <p :if={by_movie(@day, @version) == []} class="empty">
-            Aucune séance {empty_reason(@version)} ce jour-là.
+            {empty_message(@days, @version)}
           </p>
         <% else %>
           <%= for theater <- visible_theaters(@day, @version) do %>
@@ -356,7 +386,7 @@ defmodule CinemaWeb.ShowtimesLive do
           <% end %>
 
           <p :if={visible_theaters(@day, @version) == []} class="empty">
-            Aucune séance {empty_reason(@version)} ce jour-là.
+            {empty_message(@days, @version)}
           </p>
         <% end %>
       </main>
@@ -437,6 +467,16 @@ defmodule CinemaWeb.ShowtimesLive do
     case visible_theaters(day, version) do
       [] -> []
       theaters -> Cinema.by_movie(%{date: day.date, theaters: theaters})
+    end
+  end
+
+  # An empty board on a cold city means the fetch jobs have not landed yet, not
+  # that nothing is showing. The page updates itself when they do.
+  defp empty_message(days, version) do
+    if Enum.all?(days, &(&1.theaters == [])) do
+      "Chargement des séances…"
+    else
+      "Aucune séance #{empty_reason(version)} ce jour-là."
     end
   end
 

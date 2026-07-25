@@ -72,6 +72,10 @@ defmodule Cinema.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:jason, "~> 1.2"},
       {:req, "~> 0.5"},
+      {:ecto_sql, "~> 3.12"},
+      {:ecto_sqlite3, "~> 0.17"},
+      {:oban, "~> 2.23"},
+      {:exqlite, "~> 0.27"},
       {:tz, "~> 0.28"},
       # Observability
       {:telemetry_metrics, "~> 1.0"},

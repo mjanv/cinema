@@ -21,7 +21,10 @@ fi
 
 echo "==> Creating ${APP_DIR}"
 mkdir -p "${APP_DIR}"
-chown "${APP_USER}:${APP_USER}" "${APP_DIR}"
+# The DETS cache lives here and must outlive a deploy; the workflow's rsync
+# excludes it from --delete for the same reason.
+mkdir -p "${APP_DIR}/cache"
+chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
 
 echo "==> Installing systemd unit"
 install -m 0644 "$(dirname "$0")/systemd/${APP}.service" "/etc/systemd/system/${APP}.service"

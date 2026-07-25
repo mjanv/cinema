@@ -12,7 +12,6 @@ defmodule CinemaWeb.Supervisor do
     children = [
       CinemaWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:cinema, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Cinema.PubSub},
       CinemaWeb.Endpoint
     ]
 

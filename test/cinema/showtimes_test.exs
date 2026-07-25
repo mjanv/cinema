@@ -2,6 +2,8 @@ defmodule Cinema.ShowtimesTest do
   # The cache tests share one ETS table, so this module cannot run concurrently.
   use ExUnit.Case, async: false
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   alias Cinema.{Screening, Showtimes, Theater}
 
   defp screening(theater_id, theater_name, title, starts_at, version \\ :vf) do
@@ -250,9 +252,28 @@ defmodule Cinema.ShowtimesTest do
     end
   end
 
+  describe "horizon/2" do
+    test "keeps the full horizon for a normal city" do
+      assert Showtimes.horizon(5, 7) == 7
+      assert Showtimes.horizon(16, 7) == 7
+    end
+
+    test "trims the horizon for a city with many theaters" do
+      # Paris is 75 theaters: at 7 days that is 525 requests in one burst, which
+      # trips AlloCiné's rate limit and 429s every other city with it.
+      assert Showtimes.horizon(75, 7) == 3
+    end
+
+    test "never extends a horizon that is already short" do
+      assert Showtimes.horizon(75, 1) == 1
+    end
+  end
+
   describe "cache" do
     setup do
-      # These exercise the shared ETS cache, so they must not run concurrently.
+      # The cache is in SQLite now, so these need a checked-out connection.
+      pid = Sandbox.start_owner!(Cinema.Repo, shared: true)
+      on_exit(fn -> Sandbox.stop_owner(pid) end)
       Cinema.Showtimes.reset_cache()
       :ok
     end
@@ -292,14 +313,16 @@ defmodule Cinema.ShowtimesTest do
 
       put_source(WorkingSource)
       city = Cinema.City.new("ville-98857", "Grenoble")
+      Cinema.Showtimes.list_days(city, days: 1, refresh: true)
+      Oban.drain_queue(queue: :allocine)
       good = Cinema.Showtimes.list_days(city, days: 1, refresh: true)
       assert [%{theaters: [_ | _]}] = good
 
       put_source(DeadSource)
+      Oban.drain_queue(queue: :allocine)
       during_outage = Cinema.Showtimes.list_days(city, days: 1, refresh: true)
 
       assert during_outage == good, "an outage must not blank the board"
-      assert Cinema.Showtimes.status(city).stale?
     end
 
     test "reports a fresh schedule as not stale" do

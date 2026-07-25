@@ -1,7 +1,9 @@
 defmodule CinemaWeb.ShowtimesLiveTest do
-  use CinemaWeb.ConnCase, async: true
+  use CinemaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+
+  @moduletag :schedule
 
   test "opens grouped by film", %{conn: conn} do
     {:ok, _live, html} = live(conn, ~p"/")
@@ -187,6 +189,38 @@ defmodule CinemaWeb.ShowtimesLiveTest do
 
     refute html =~ ~s(class="film-head")
     assert html =~ "Toy Story 5"
+  end
+
+  @tag schedule: false
+  test "says it is loading rather than showing an empty board", %{conn: conn} do
+    # A cold city: jobs are queued but none have landed. The board must say so
+    # rather than claiming there are no screenings.
+    Cinema.reset_cache()
+
+    {:ok, _live, html} = live(conn, ~p"/")
+
+    assert html =~ "Chargement des séances"
+    refute html =~ "Aucune séance"
+  end
+
+  test "refreshes itself when the city's fetch jobs land", %{conn: conn} do
+    # A cold city renders empty and fills in; without this the board would sit
+    # blank until the user reloaded.
+    {:ok, live, _html} = live(conn, ~p"/")
+
+    send(live.pid, {:schedule_updated, "grenoble"})
+
+    assert render(live) =~ "Toy Story 5"
+  end
+
+  test "ignores updates for a city it is not showing", %{conn: conn} do
+    {:ok, live, _html} = live(conn, ~p"/")
+
+    send(live.pid, {:schedule_updated, "lyon"})
+
+    # Still Grenoble's board, not Lyon's.
+    assert render(live) =~ "Toy Story 5"
+    refute render(live) =~ "Film Lyonnais"
   end
 
   test "regroups by cinema on demand", %{conn: conn} do

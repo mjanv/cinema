@@ -8,6 +8,7 @@ defmodule Cinema.Showtimes do
   """
 
   alias Cinema.{City, Screening, Theater}
+  alias Cinema.Jobs.FetchDay
 
   @cache __MODULE__.Cache
   @ttl :timer.minutes(30)
@@ -15,6 +16,18 @@ defmodule Cinema.Showtimes do
   # While a source is down, retry on this shorter cadence instead of on every
   # request, so an outage does not turn into a request storm.
   @stale_retry_ms :timer.minutes(2)
+
+  # Paris is 75 theaters x 7 days = 525 requests for one page load. Fanning
+  # those out aggressively trips AlloCiné's rate limit, and the resulting 429s
+  # hit every other city too. Keep the pipe narrow: a cold city takes a few
+  # seconds longer, which the cache then amortises over hours.
+  @max_concurrency 3
+
+  # Beyond this many theaters a full-horizon fetch is too big a burst, so the
+  # horizon is trimmed instead. Better a correct board covering fewer days than
+  # a rate-limited one covering none.
+  @large_city_theaters 20
+  @large_city_days 3
 
   @type movie :: %{
           title: String.t(),
@@ -139,10 +152,32 @@ defmodule Cinema.Showtimes do
 
   defp empty?(days), do: Enum.all?(days, &(&1.theaters == []))
 
+  # Fetching goes through Oban: one job per theater and date, paced by the
+  # queue. `load` assembles whatever those jobs have already cached and queues
+  # the rest, so a cold city returns partial data immediately and fills in
+  # rather than blocking on hundreds of requests.
   defp load(city, today, days) do
     source = config(:source, Cinema.Allocine)
-    build(source.theaters(city), &source.fetch_day/2, today, days)
+    theaters = source.theaters(city)
+
+    FetchDay.enqueue(city, days: days, today: today)
+
+    build(theaters, &fetch_cached(city, &1, &2), today, days)
   end
+
+  defp fetch_cached(city, theater, date) do
+    case FetchDay.fetched(city, theater.external_id, date) do
+      {:ok, screenings} -> {:ok, screenings}
+      :miss -> {:ok, []}
+    end
+  end
+
+  # A big city multiplied by a long horizon is what trips the rate limit.
+  @doc false
+  def horizon(theater_count, days) when theater_count > @large_city_theaters,
+    do: min(days, @large_city_days)
+
+  def horizon(_theater_count, days), do: days
 
   @doc """
   Pure aggregation: fans out `fetch` over theaters × dates and shapes the tree.
@@ -170,7 +205,7 @@ defmodule Cinema.Showtimes do
           {:error, _reason} -> {theater, date, []}
         end
       end,
-      max_concurrency: 8,
+      max_concurrency: config(:max_concurrency, @max_concurrency),
       timeout: 30_000,
       on_timeout: :kill_task,
       ordered: true
@@ -321,19 +356,12 @@ defmodule Cinema.Showtimes do
   # --- cache -------------------------------------------------------------
 
   @doc false
-  def init_cache do
-    :ets.new(@cache, [:named_table, :public, :set, read_concurrency: true])
-  rescue
-    ArgumentError -> @cache
-  end
+  def init_cache, do: Cinema.Store.open(@cache)
 
   @doc false
   def reset_cache do
     init_cache()
-    :ets.delete_all_objects(@cache)
-    :ok
-  rescue
-    ArgumentError -> :ok
+    Cinema.Store.clear(@cache)
   end
 
   # `:fresh` respects the TTL; `:any` returns the last schedule whatever its age,
@@ -341,19 +369,20 @@ defmodule Cinema.Showtimes do
   defp read_cache(city, mode) do
     key = cache_key(city)
 
-    case :ets.lookup(@cache, key) do
-      [{^key, entry, stored_at}] ->
-        age = System.monotonic_time(:millisecond) - stored_at
-        ttl = if entry.stale?, do: @stale_retry_ms, else: config(:cache_ttl_ms, @ttl)
+    # A stale entry is retried sooner: an outage should recover quickly without
+    # turning every page load into a request storm.
+    ttl =
+      case Cinema.Store.fetch(key_table(), key, :infinity) do
+        {:ok, %{stale?: true}} -> @stale_retry_ms
+        _otherwise -> config(:cache_ttl_ms, @ttl)
+      end
 
-        if mode == :any or age < ttl, do: {:ok, entry}, else: :miss
+    ttl = if mode == :any, do: :infinity, else: ttl
 
-      [] ->
-        :miss
-    end
-  rescue
-    ArgumentError -> :miss
+    Cinema.Store.fetch(key_table(), key, ttl)
   end
+
+  defp key_table, do: @cache
 
   defp put_cache(city, days, opts) do
     stale? = Keyword.fetch!(opts, :stale?)
@@ -364,10 +393,8 @@ defmodule Cinema.Showtimes do
       fetched_at: if(stale?, do: last_fetched_at(city), else: DateTime.utc_now())
     }
 
-    :ets.insert(@cache, {cache_key(city), entry, System.monotonic_time(:millisecond)})
+    Cinema.Store.put(@cache, cache_key(city), entry)
     entry
-  rescue
-    ArgumentError -> %{days: days, stale?: false, fetched_at: DateTime.utc_now()}
   end
 
   defp last_fetched_at(city) do
