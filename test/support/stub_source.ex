@@ -46,6 +46,7 @@ defmodule Cinema.StubSource do
       theater_name: theater_name,
       title: title,
       runtime_min: 100,
+      genres: ["Animation", "Aventure"],
       starts_at: NaiveDateTime.new!(date, time),
       date: date,
       version: version,

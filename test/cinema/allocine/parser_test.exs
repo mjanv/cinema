@@ -32,16 +32,16 @@ defmodule Cinema.Allocine.ParserTest do
     posters = screenings |> Enum.map(& &1.poster_url) |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
     assert posters != []
-    assert Enum.all?(posters, &String.contains?(&1, "/c_120_160/"))
+    assert Enum.all?(posters, &String.contains?(&1, "/c_180_240/"))
     assert Enum.all?(posters, &String.starts_with?(&1, "https://"))
   end
 
   test "resizes both poster URL shapes AlloCiné serves" do
     for {original, expected} <- [
           {"https://fr.web.img2.acsta.net/img/ba/a6/abc.jpg",
-           "https://fr.web.img2.acsta.net/c_120_160/img/ba/a6/abc.jpg"},
+           "https://fr.web.img2.acsta.net/c_180_240/img/ba/a6/abc.jpg"},
           {"https://fr.web.img5.acsta.net/pictures/17/10/23/09/41/4746507.jpg",
-           "https://fr.web.img5.acsta.net/c_120_160/pictures/17/10/23/09/41/4746507.jpg"}
+           "https://fr.web.img5.acsta.net/c_180_240/pictures/17/10/23/09/41/4746507.jpg"}
         ] do
       payload = %{
         "results" => [

@@ -112,7 +112,12 @@
 .board {
   --ink: #0f1115;
   --paper: #f5f2ec;
-  --accent: #e4572e;
+  /* Version colours: warm vermilion for subtitled, cool teal for dubbed.
+     Opposed temperatures so the two read apart instantly, even in the corner
+     of the eye while scanning times. */
+  --vost: #e4572e;
+  --vf: #2ec4b6;
+  --accent: var(--vost);
   --slate: #7a8b99;
   --rule: #232830;
 
@@ -257,24 +262,49 @@
 .version:hover { color: var(--paper); }
 .version.is-on { background: var(--rule); color: var(--paper); border-color: var(--slate); }
 
+/* The version filters carry the same colours as the chips they select, so the
+   mapping is learned once rather than looked up. */
+.version[phx-value-version="vost"] { border-color: color-mix(in srgb, var(--vost) 45%, var(--rule)); }
+.version[phx-value-version="vf"] { border-color: color-mix(in srgb, var(--vf) 45%, var(--rule)); }
+
+.version[phx-value-version="vost"].is-on {
+  background: color-mix(in srgb, var(--vost) 20%, transparent);
+  border-color: var(--vost);
+  color: var(--paper);
+}
+
+.version[phx-value-version="vf"].is-on {
+  background: color-mix(in srgb, var(--vf) 20%, transparent);
+  border-color: var(--vf);
+  color: var(--paper);
+}
+
 main { padding: 0.5rem 1rem 3rem; }
 
 .theater { margin-top: 1.75rem; }
 
+/* Only the cinema-grouped view: its heading is larger, so it needs more air
+   above it. "Par film" sections share the .theater class and keep the tighter
+   rhythm. */
+.theater:has(> .theater-name) { margin-top: 2rem; }
+.theater:first-child { margin-top: 1.25rem; }
+
+/* In "Par cinéma" the cinema is the organising unit, so it leads: larger than
+   the film titles under it, in paper rather than slate. Uppercase tracking is
+   dropped — it reads as a label at 11px, as shouting at 17px. */
 .theater-name {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--slate);
-  margin: 0 0 0.625rem;
-  padding-bottom: 0.4rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--paper);
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--rule);
 }
 
 .movie {
   display: grid;
-  grid-template-columns: 3.25rem 1fr;
+  grid-template-columns: 5rem 1fr;
   gap: 0.75rem;
   padding: 0.75rem 0;
   border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
@@ -283,8 +313,8 @@ main { padding: 0.5rem 1rem 3rem; }
 
 /* Poster is an identifier, not the subject: small, quiet, never a hero. */
 .poster {
-  width: 3.25rem;
-  height: 4.35rem;
+  width: 5rem;
+  height: 6.7rem;
   object-fit: cover;
   border-radius: 4px;
   background: var(--rule);
@@ -314,6 +344,28 @@ main { padding: 0.5rem 1rem 3rem; }
   font-size: 0.75rem;
   color: var(--slate);
   font-variant-numeric: tabular-nums;
+}
+
+/* Genres: context you take in peripherally while scanning times, so they stay
+   small, outlined and slate — never filled, which would pull the eye. */
+.genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+}
+
+.genre {
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--slate);
+  font-size: 0.625rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 0.2rem 0.45rem;
+  white-space: nowrap;
 }
 
 /* The signature: tabular time chips, VOST marked by a rule, not a badge. */
@@ -350,12 +402,20 @@ a.chip:hover { border-color: var(--paper); }
   opacity: 0.55;
 }
 
-.chip.is-past.is-vost { border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-
-.chip.is-vost {
-  border-bottom: 2px solid var(--accent);
+/* Version is carried by the underline, not a badge: it colours the chip
+   without competing with the time itself. */
+.chip.is-vost,
+.chip.is-vf {
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
   padding-bottom: calc(0.3rem - 1px);
 }
+
+.chip.is-vost { border-bottom-color: var(--vost); }
+.chip.is-vf { border-bottom-color: var(--vf); }
+
+.chip.is-past.is-vost { border-bottom-color: color-mix(in srgb, var(--vost) 45%, transparent); }
+.chip.is-past.is-vf { border-bottom-color: color-mix(in srgb, var(--vf) 45%, transparent); }
 
 /* Grouped by movie: the film is the heading, cinemas become the sub-rows. */
 .movie-lead { border-bottom: 0; padding-top: 0; }

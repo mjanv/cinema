@@ -24,11 +24,12 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=cinema
 
-# Small footprint: the whole schedule is a few days of showtimes in ETS.
-# Sized to leave premiere-ecoute's 600M allocation untouched on a 1GB droplet.
-MemoryMax=150M
-MemoryHigh=120M
-MemorySwapMax=64M
+# The droplet has ~2 GB with ~1 GB free, so this is roomy rather than tight.
+# Measured ~113 MB at idle after warming 7 days of showtimes: an earlier 150M
+# cap left it permanently above MemoryHigh, i.e. throttled by the kernel.
+MemoryMax=300M
+MemoryHigh=250M
+MemorySwapMax=128M
 
 CPUQuota=40%
 

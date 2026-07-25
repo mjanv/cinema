@@ -80,9 +80,10 @@ defmodule Cinema.Allocine.Parser do
     end
   end
 
-  # AlloCiné serves ~260 KB originals; the CDN resizes via a path segment, which
-  # takes a poster down to ~9 KB. Worth it when a busy day shows 15 of them.
-  @poster_size "c_120_160"
+  # AlloCiné serves ~260 KB originals; the CDN resizes via a path segment. At
+  # ~8 KB this is still tiny, and 180px wide keeps the 80px render sharp on a
+  # retina phone.
+  @poster_size "c_180_240"
 
   # Paths vary (/img/..., /pictures/...); the size segment goes right after the
   # host in every case. Anything unexpected falls through to the original URL.

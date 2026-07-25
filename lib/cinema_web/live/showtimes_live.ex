@@ -217,8 +217,8 @@ defmodule CinemaWeb.ShowtimesLive do
                 alt=""
                 loading="lazy"
                 decoding="async"
-                width="60"
-                height="80"
+                width="80"
+                height="107"
               />
               <div :if={is_nil(movie.poster_url)} class="poster poster-empty" aria-hidden="true">
               </div>
@@ -228,6 +228,8 @@ defmodule CinemaWeb.ShowtimesLive do
                   <h2 class="movie-title">{movie.title}</h2>
                   <span :if={movie.runtime_min} class="movie-meta">{runtime(movie.runtime_min)}</span>
                 </div>
+
+                <.genres list={movie.genres} />
 
                 <div :for={venue <- movie.theaters} class="venue">
                   <h3 class="venue-name">{venue.name}</h3>
@@ -257,8 +259,8 @@ defmodule CinemaWeb.ShowtimesLive do
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  width="60"
-                  height="80"
+                  width="80"
+                  height="107"
                 />
                 <div :if={is_nil(movie.poster_url)} class="poster poster-empty" aria-hidden="true">
                 </div>
@@ -268,6 +270,8 @@ defmodule CinemaWeb.ShowtimesLive do
                     <h3 class="movie-title">{movie.title}</h3>
                     <span :if={movie.runtime_min} class="movie-meta">{runtime(movie.runtime_min)}</span>
                   </div>
+
+                  <.genres list={movie.genres} />
 
                   <ul class="times">
                     <li :for={screening <- movie.screenings}>
@@ -297,6 +301,20 @@ defmodule CinemaWeb.ShowtimesLive do
     """
   end
 
+  attr :list, :list, required: true
+
+  # Capped at three: a fourth wraps and starts competing with the times, which
+  # are what the eye is actually scanning for.
+  defp genres(assigns) do
+    assigns = assign(assigns, list: Enum.take(assigns.list, 3))
+
+    ~H"""
+    <ul :if={@list != []} class="genres">
+      <li :for={genre <- @list} class="genre">{genre}</li>
+    </ul>
+    """
+  end
+
   attr :screening, :map, required: true
   attr :now, NaiveDateTime, required: true
 
@@ -306,7 +324,7 @@ defmodule CinemaWeb.ShowtimesLive do
     ~H"""
     <a
       :if={@screening.booking_url && not @past?}
-      class={["chip", @screening.version == :vost && "is-vost"]}
+      class={["chip", version_class(@screening.version)]}
       href={@screening.booking_url}
       target="_blank"
       rel="noopener"
@@ -315,7 +333,7 @@ defmodule CinemaWeb.ShowtimesLive do
     </a>
     <span
       :if={is_nil(@screening.booking_url) or @past?}
-      class={["chip", @screening.version == :vost && "is-vost", @past? && "is-past"]}
+      class={["chip", version_class(@screening.version), @past? && "is-past"]}
     >
       {format_time(@screening.starts_at)}
     </span>
@@ -353,6 +371,9 @@ defmodule CinemaWeb.ShowtimesLive do
   defp empty_reason(:vf), do: "en VF"
   defp empty_reason(:vost), do: "en VOST"
   defp empty_reason(:all), do: ""
+
+  defp version_class(:vost), do: "is-vost"
+  defp version_class(:vf), do: "is-vf"
 
   defp page_title(nil), do: "Séances"
   defp page_title(city), do: "Séances à #{city.name}"

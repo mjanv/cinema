@@ -118,6 +118,25 @@ defmodule CinemaWeb.ShowtimesLiveTest do
     assert render_click(live, "refresh") =~ "AlloCiné est injoignable"
   end
 
+  test "marks each screening with its version so the colours can differ", %{conn: conn} do
+    {:ok, live, _html} = live(conn, ~p"/")
+
+    # The stub programmes one VF (00:01) and one VOST (23:59) today.
+    assert has_element?(live, ".chip.is-vf", "00:01")
+    assert has_element?(live, ".chip.is-vost", "23:59")
+    refute has_element?(live, ".chip.is-vf.is-vost")
+  end
+
+  test "shows a film's genres as labels in both groupings", %{conn: conn} do
+    {:ok, live, html} = live(conn, ~p"/")
+
+    assert html =~ ~s(class="genres")
+    assert has_element?(live, ".genre", "Animation")
+
+    html = live |> element("button", "Par cinéma") |> render_click()
+    assert html =~ ~s(class="genres")
+  end
+
   test "regroups by cinema on demand", %{conn: conn} do
     {:ok, live, _html} = live(conn, ~p"/")
 
