@@ -8,14 +8,11 @@ defmodule Cinema.Application do
     Cinema.init_cache()
 
     children = [
-      CinemaWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:cinema, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Cinema.PubSub},
-      CinemaWeb.Endpoint,
-      Cinema.Warmer
+      Cinema.Supervisor,
+      CinemaWeb.Supervisor
     ]
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: Cinema.Supervisor)
+    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
   end
 
   @impl true

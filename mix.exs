@@ -44,6 +44,8 @@ defmodule Cinema.MixProject do
 
   defp deps do
     [
+      # Web
+      {:bandit, "~> 1.5"},
       {:phoenix, "~> 1.8.9"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
@@ -66,15 +68,17 @@ defmodule Cinema.MixProject do
        app: false,
        compile: false,
        depth: 1},
-      {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"},
+      # Backend
+      {:dns_cluster, "~> 0.2.0"},
       {:jason, "~> 1.2"},
       {:req, "~> 0.5"},
       {:tz, "~> 0.28"},
+      # Observability
+      {:telemetry_metrics, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
+      # Code quality
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 
