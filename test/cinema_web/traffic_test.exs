@@ -62,22 +62,23 @@ defmodule CinemaWeb.TrafficTest do
   end
 
   describe "the dashboard" do
-    test "asks for a password", %{conn: conn} do
+    test "asks for the password when one is configured", %{conn: conn} do
       assert get(conn, ~p"/traffic").status == 401
+      assert get(as_operator(conn), ~p"/traffic").status == 200
     end
 
-    test "does not exist when no password is configured", %{conn: conn} do
+    test "opens to anyone when no password is configured", %{conn: conn} do
       unconfigured(nil)
 
-      assert get(conn, ~p"/traffic").status == 404
+      assert get(conn, ~p"/traffic").status == 200
     end
 
-    test "does not exist when the password is empty" do
-      # An unset deploy secret reaches the release as "", which must not become
-      # a dashboard anyone can open by submitting a blank password.
+    test "opens when the password is empty" do
+      # An unset deploy secret reaches the release as "", which is no password
+      # at all -- asking for one nobody can supply would only look locked.
       unconfigured(username: "cinema", password: "")
 
-      assert get(build_conn(), ~p"/traffic").status == 404
+      assert get(build_conn(), ~p"/traffic").status == 200
     end
 
     test "charts the traffic it has", %{conn: conn} do

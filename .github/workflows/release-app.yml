@@ -94,7 +94,7 @@ jobs:
           # 4000 belongs to premiere-ecoute on this host.
           PORT=4001
           SECRET_KEY_BASE=${SECRET_KEY_BASE}
-          # Unset leaves /traffic returning 404 rather than opening it.
+          # Optional: unset leaves /traffic open to anyone who finds it.
           OPERATOR_PASSWORD=${OPERATOR_PASSWORD}
           MIX_ENV=prod
           EOF

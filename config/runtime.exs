@@ -41,8 +41,8 @@ if config_env() == :prod do
     busy_timeout: 5_000,
     pool_size: 5
 
-  # No OPERATOR_PASSWORD, no dashboard: the route 404s rather than opening the
-  # numbers to anyone who guesses the path.
+  # Optional: with no OPERATOR_PASSWORD the dashboard is open to anyone who
+  # finds the path, with one it asks for it.
   config :cinema, :operator,
     username: System.get_env("OPERATOR_USER") || "cinema",
     password: System.get_env("OPERATOR_PASSWORD")

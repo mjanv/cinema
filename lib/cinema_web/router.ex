@@ -10,11 +10,9 @@ defmodule CinemaWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  # The traffic it reports is nobody's business but the operator's, and the
-  # page is one password away from being a public list of which cities the app
-  # is worth running for.
+  # Locked only when there is a password to lock it with.
   pipeline :operator do
-    plug :require_operator
+    plug :authenticate_operator
   end
 
   scope "/", CinemaWeb do
@@ -50,18 +48,24 @@ defmodule CinemaWeb.Router do
     end
   end
 
-  # Fails closed: without a password the page does not exist, so a deploy that
-  # forgets to set one exposes nothing rather than everything. An empty
-  # password counts as unset -- an unset secret reaches the release as "",
-  # and letting that through would be worse than no password at all.
-  defp require_operator(conn, _opts) do
+  # The password is optional: set one and the dashboard asks for it, leave it
+  # out and the dashboard is simply open. An empty password counts as no
+  # password -- an unset deploy secret reaches the release as "", and a
+  # dashboard that opens to a blank password would be worse than an open one,
+  # because it would look locked.
+  #
+  # Open by default means an unset OPERATOR_PASSWORD publishes the numbers to
+  # anyone who finds the path. They are counts of board views with no visitor
+  # in them, which is why that is a reasonable default rather than a hole --
+  # but a public deploy that would rather not show them needs the password set.
+  defp authenticate_operator(conn, _opts) do
     case Application.get_env(:cinema, :operator) do
       [username: username, password: password]
       when is_binary(password) and byte_size(password) > 0 ->
         Plug.BasicAuth.basic_auth(conn, username: username, password: password)
 
-      _unconfigured ->
-        conn |> send_resp(:not_found, "") |> halt()
+      _no_password ->
+        conn
     end
   end
 end
