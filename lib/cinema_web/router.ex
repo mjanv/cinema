@@ -8,6 +8,7 @@ defmodule CinemaWeb.Router do
     plug :put_root_layout, html: {CinemaWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :count_traffic
   end
 
   scope "/", CinemaWeb do
@@ -35,5 +36,12 @@ defmodule CinemaWeb.Router do
 
       live_dashboard "/dashboard", metrics: CinemaWeb.Telemetry
     end
+  end
+
+  # One counted hit per page load: LiveView's first render comes through here,
+  # while the socket that follows and every in-page patch do not.
+  defp count_traffic(conn, _opts) do
+    Cinema.Traffic.hit(conn.request_path)
+    conn
   end
 end
