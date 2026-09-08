@@ -94,11 +94,14 @@ jobs:
           # 4000 belongs to premiere-ecoute on this host.
           PORT=4001
           SECRET_KEY_BASE=${SECRET_KEY_BASE}
+          # Unset leaves /traffic returning 404 rather than opening it.
+          OPERATOR_PASSWORD=${OPERATOR_PASSWORD}
           MIX_ENV=prod
           EOF
         env:
           PHX_HOST: cinema.premiere-ecoute.fr
           SECRET_KEY_BASE: ${{ secrets.CINEMA_SECRET_KEY_BASE }}
+          OPERATOR_PASSWORD: ${{ secrets.CINEMA_OPERATOR_PASSWORD }}
 
       - name: Backup current release
         run: |

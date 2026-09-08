@@ -26,3 +26,7 @@ config :phoenix_live_view,
 
 # Query logging is noise for a cache table hit on every request.
 config :cinema, Cinema.Repo, log: false
+
+# The traffic dashboard is behind basic auth everywhere; locally the password
+# is a known one rather than something to look up.
+config :cinema, :operator, username: "cinema", password: "cinema"

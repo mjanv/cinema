@@ -60,11 +60,24 @@ Push to `main` triggers `.github/workflows/release-app.yml`:
 | Name | Kind | Value |
 |------|------|-------|
 | `CINEMA_SECRET_KEY_BASE` | secret | `mix phx.gen.secret` |
+| `CINEMA_OPERATOR_PASSWORD` | secret | password for `/traffic`; unset means the page 404s |
 | `DO_SSH_PRIVATE_KEY` | secret | same deploy key Première Écoute uses |
 | `DO_HOST` | variable | droplet IP or hostname |
 
 `PHX_HOST` and `PORT` are set inline in the workflow, not as secrets — they are
 not sensitive and keeping them in the repo makes the topology reviewable.
+
+## Traffic
+
+`https://cinema.premiere-ecoute.fr/traffic` shows views per hour, per city and
+per page, behind basic auth as `cinema` / `CINEMA_OPERATOR_PASSWORD`
+(`OPERATOR_USER` overrides the username). The route fails closed: with no
+password set it 404s, so a deploy that forgets the secret publishes nothing.
+
+The counts live in the `traffic` table of the same SQLite as the cache, which
+the deploy's rsync already excludes from `--delete`, so they survive a release.
+Nothing about a visitor is stored — no address, no session, no user agent —
+only how many times a board was looked at.
 
 ## Verify
 

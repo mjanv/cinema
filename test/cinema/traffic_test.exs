@@ -10,63 +10,85 @@ defmodule Cinema.TrafficTest do
     :ok
   end
 
-  test "counts a pageview" do
-    Traffic.hit("/")
+  test "counts a view" do
+    Traffic.hit("/", "grenoble")
 
-    assert [{_day, 1}] = Traffic.daily()
+    assert Traffic.total() == 1
+    assert List.last(Traffic.daily()) == {today(), 1}
   end
 
   test "adds repeat views to the same row rather than inserting a new one" do
-    for _ <- 1..3, do: Traffic.hit("/")
+    for _ <- 1..3, do: Traffic.hit("/", "grenoble")
 
-    assert [{_day, 3}] = Traffic.daily()
     assert Repo.aggregate(Hit, :count) == 1
+    assert Traffic.total() == 3
   end
 
-  test "keeps paths apart" do
-    Traffic.hit("/")
-    Traffic.hit("/")
-    Traffic.hit("/health")
+  test "keeps cities apart" do
+    Traffic.hit("/", "grenoble")
+    Traffic.hit("/", "grenoble")
+    Traffic.hit("/", "lyon")
 
-    assert Traffic.paths() == [{"/", 2}, {"/health", 1}]
+    assert Traffic.cities() == [{"grenoble", 2}, {"lyon", 1}]
   end
 
-  test "sums the paths of an hour into one point" do
-    Traffic.hit("/")
-    Traffic.hit("/health")
+  test "keeps pages apart" do
+    Traffic.hit("/", "grenoble")
+    Traffic.hit("/traffic")
+    Traffic.hit("/traffic")
 
-    assert [{_hour, 2}] = Traffic.hourly()
+    assert Traffic.paths() == [{"/traffic", 2}, {"/", 1}]
   end
 
-  test "a series is oldest first and leaves empty buckets out" do
-    seed("2026-09-01T09", "/", 5)
-    seed("2026-09-03T22", "/", 2)
-    seed("2026-09-03T23", "/", 1)
+  test "counts a page that shows no city without ranking it as one" do
+    Traffic.hit("/traffic")
 
-    assert Traffic.daily(9_999) == [{"2026-09-01", 5}, {"2026-09-03", 3}]
+    assert Traffic.cities() == []
+    assert Traffic.paths() == [{"/traffic", 1}]
+    assert Traffic.total() == 1
+  end
+
+  test "an hourly series is dense, oldest first, and ends on the current hour" do
+    seed(hour(-2), "/", "grenoble", 5)
+
+    assert Traffic.hourly(3) == [{hour(-2), 5}, {hour(-1), 0}, {hour(0), 0}]
+  end
+
+  test "a daily series covers every day of the window, quiet ones included" do
+    Traffic.hit("/", "grenoble")
+
+    series = Traffic.daily(7)
+
+    assert length(series) == 7
+    assert List.last(series) == {today(), 1}
+    assert Enum.all?(Enum.take(series, 6), &(elem(&1, 1) == 0))
   end
 
   test "a series stops at the window it is asked for" do
-    # Yesterday is inside a two-day window; last month never is.
-    seed(bucket(-1, :day), "/", 4)
-    seed(bucket(-40, :day), "/", 99)
+    seed(day(-40) <> "T09", "/", "grenoble", 99)
 
-    assert Traffic.daily(2) == [{Date.to_iso8601(Date.utc_today() |> Date.add(-1)), 4}]
+    assert Traffic.total(2) == 0
+    assert Enum.all?(Traffic.daily(2), &(elem(&1, 1) == 0))
   end
 
-  test "an empty table is an empty series, not a crash" do
-    assert Traffic.daily() == []
-    assert Traffic.hourly() == []
+  test "an empty table reads as zeroes, not as a crash" do
+    assert Traffic.cities() == []
     assert Traffic.paths() == []
+    assert Traffic.total() == 0
+    assert Traffic.hourly(3) |> Enum.map(&elem(&1, 1)) == [0, 0, 0]
   end
 
-  defp seed(bucket, path, count) do
-    Repo.insert_all(Hit, [%{bucket: bucket, path: path, count: count}])
+  defp seed(bucket, path, city, count) do
+    Repo.insert_all(Hit, [%{bucket: bucket, path: path, city: city, count: count}])
   end
 
-  defp bucket(amount, unit) do
+  defp today, do: Date.to_iso8601(Date.utc_today())
+
+  defp day(offset), do: Date.to_iso8601(Date.add(Date.utc_today(), offset))
+
+  defp hour(offset) do
     DateTime.utc_now()
-    |> DateTime.add(amount, unit)
+    |> DateTime.add(offset, :hour)
     |> DateTime.to_iso8601()
     |> binary_part(0, 13)
   end

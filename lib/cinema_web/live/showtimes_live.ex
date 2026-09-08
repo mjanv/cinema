@@ -9,6 +9,7 @@ defmodule CinemaWeb.ShowtimesLive do
   use CinemaWeb, :live_view
 
   alias Cinema.Jobs.Notifier
+  alias Cinema.Traffic
   alias Phoenix.PubSub
 
   # The clock only needs to be right to the minute; ticking every 30s keeps it
@@ -69,6 +70,8 @@ defmodule CinemaWeb.ShowtimesLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
+    previous = socket.assigns.city
+
     socket =
       case Cinema.find_city(params["city"]) do
         nil ->
@@ -90,7 +93,24 @@ defmodule CinemaWeb.ShowtimesLive do
           )
       end
 
+    count_view(socket, previous)
+
     {:noreply, socket}
+  end
+
+  # One count per board actually put on screen: the connected mount, which
+  # arrives here with no city yet, and every later switch to a different one.
+  # A patch that lands on the city already showing is a day or a film changing,
+  # not a new board, so it does not count. Neither does the dead render, which
+  # is what crawlers get and which nobody stayed for, nor a visit that never
+  # resolved a city at all -- that is AlloCiné being down, and it belongs in
+  # the logs rather than in the traffic.
+  defp count_view(%{assigns: %{city: city}} = socket, previous) do
+    if connected?(socket) and not is_nil(city) and city != previous do
+      Traffic.hit("/", city.slug)
+    end
+
+    :ok
   end
 
   @impl true

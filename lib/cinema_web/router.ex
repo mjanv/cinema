@@ -8,13 +8,25 @@ defmodule CinemaWeb.Router do
     plug :put_root_layout, html: {CinemaWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :count_traffic
+  end
+
+  # The traffic it reports is nobody's business but the operator's, and the
+  # page is one password away from being a public list of which cities the app
+  # is worth running for.
+  pipeline :operator do
+    plug :require_operator
   end
 
   scope "/", CinemaWeb do
     pipe_through :browser
 
     live "/", ShowtimesLive, :index
+  end
+
+  scope "/", CinemaWeb do
+    pipe_through [:browser, :operator]
+
+    live "/traffic", TrafficLive, :index
   end
 
   # No session or CSRF: the deploy health check is a bare liveness probe.
@@ -38,10 +50,18 @@ defmodule CinemaWeb.Router do
     end
   end
 
-  # One counted hit per page load: LiveView's first render comes through here,
-  # while the socket that follows and every in-page patch do not.
-  defp count_traffic(conn, _opts) do
-    Cinema.Traffic.hit(conn.request_path)
-    conn
+  # Fails closed: without a password the page does not exist, so a deploy that
+  # forgets to set one exposes nothing rather than everything. An empty
+  # password counts as unset -- an unset secret reaches the release as "",
+  # and letting that through would be worse than no password at all.
+  defp require_operator(conn, _opts) do
+    case Application.get_env(:cinema, :operator) do
+      [username: username, password: password]
+      when is_binary(password) and byte_size(password) > 0 ->
+        Plug.BasicAuth.basic_auth(conn, username: username, password: password)
+
+      _unconfigured ->
+        conn |> send_resp(:not_found, "") |> halt()
+    end
   end
 end
