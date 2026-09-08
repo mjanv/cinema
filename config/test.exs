@@ -34,3 +34,7 @@ config :cinema, Cinema.Jobs.FetchDay, pace_ms: 0
 
 # test_helper.exs migrates once; booting into the sandbox pool would deadlock.
 config :cinema, run_migrations_on_boot: false
+
+# Only so the locked path is exercised; the tests that want the open one
+# unset this for themselves.
+config :cinema, :operator, username: "cinema", password: "cinema"

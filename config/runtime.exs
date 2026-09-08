@@ -41,6 +41,12 @@ if config_env() == :prod do
     busy_timeout: 5_000,
     pool_size: 5
 
+  # Optional: with no OPERATOR_PASSWORD the dashboard is open to anyone who
+  # finds the path, with one it asks for it.
+  config :cinema, :operator,
+    username: System.get_env("OPERATOR_USER") || "cinema",
+    password: System.get_env("OPERATOR_PASSWORD")
+
   config :cinema, CinemaWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
