@@ -20,7 +20,8 @@ defmodule Sortir.Supervisor do
     children = [
       Sortir.Core.Supervisor,
       Sortir.Cinema.Supervisor,
-      Sortir.Agenda.Supervisor
+      Sortir.Agenda.Supervisor,
+      Sortir.Videos.Supervisor
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)

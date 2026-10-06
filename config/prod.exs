@@ -20,3 +20,4 @@ config :sortir, Sortir.Cinema.Showtimes,
 # Only scrapes when the agenda has gone stale, so a redeploy does not re-read
 # every venue.
 config :sortir, Sortir.Agenda.Warmer, scrape_on_boot: true
+config :sortir, Sortir.Videos.Warmer, fetch_on_boot: true

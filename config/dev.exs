@@ -26,3 +26,6 @@ config :phoenix_live_view,
 
 # Query logging is noise for a cache table hit on every request.
 config :sortir, Sortir.Core.Repo, log: false
+
+# Without this the videos page is empty until the first hourly fetch.
+config :sortir, Sortir.Videos.Warmer, fetch_on_boot: true

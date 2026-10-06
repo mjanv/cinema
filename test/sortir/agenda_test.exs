@@ -49,6 +49,7 @@ defmodule Sortir.AgendaTest do
 
     test "reports what each venue has programmed" do
       {:ok, venue} = Agenda.upsert_venue(venue_attrs())
+
       {:ok, _first} =
         Agenda.save(
           scraped(%{occurrence: %{starts_at: days_ahead(1, ~T[18:00:00]), ends_at: nil}}),

@@ -21,6 +21,7 @@ defmodule SortirWeb.Router do
     live "/", ShowtimesLive, :index
     live "/agenda", AgendaLive, :index
     live "/agenda/venues", VenuesLive, :index
+    live "/nospoil/eurosportfrance", VideosLive, :index
   end
 
   scope "/", SortirWeb do

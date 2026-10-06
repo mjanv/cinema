@@ -65,7 +65,9 @@ config :sortir, Oban,
     allocine: [limit: 1],
     # Its own queue: a slow or broken venue scraper must not stall showtimes.
     # One at a time is plenty — a venue is one page a month, not 525 requests.
-    agenda: [limit: 1]
+    agenda: [limit: 1],
+    # The channel's RSS feed: one request, but the same one-at-a-time rule.
+    videos: [limit: 1]
   ],
   plugins: [
     # Finished jobs are only useful for a short while after the fact.
@@ -75,7 +77,16 @@ config :sortir, Oban,
     # 04:00 local, when the venues' sites are idle. A job with no `source`
     # fans out to every source — see `Sortir.Agenda.Jobs.ScrapeVenue`.
     {Oban.Plugins.Cron,
-     timezone: "Europe/Paris", crontab: [{"0 4 * * *", Sortir.Agenda.Jobs.ScrapeVenue}]}
+     timezone: "Europe/Paris",
+     crontab: [
+       {"0 4 * * *", Sortir.Agenda.Jobs.ScrapeVenue},
+       # The feed lists only the 15 newest videos, about three days' worth, so
+       # every three hours leaves a wide margin. Opening the page also fetches
+       # (rate limited), which is what keeps it fresh for a visitor.
+       {"0 */3 * * *", Sortir.Videos.Jobs.Fetch},
+       # Videos older than a month are not worth browsing; once a day is plenty.
+       {"30 4 * * *", Sortir.Videos.Jobs.Prune}
+     ]}
   ]
 
 config :sortir, Sortir.Core.Clock, timezone: "Europe/Paris"

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <yt:channelId>ozt5iXNqmhU1I7tcjJ0UFQ</yt:channelId>
+ <title>Eurosport France</title>
+ <published>2020-09-01T08:52:25+00:00</published>
+ <entry>
+  <id>yt:video:AAAAAAAAAA1</id>
+  <yt:videoId>AAAAAAAAAA1</yt:videoId>
+  <title>Evenepoel-Ciccone, pourquoi pas ex aequo ? Seixas à l'assaut du Lombardie</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=AAAAAAAAAA1"/>
+  <published>2026-10-05T14:10:31+00:00</published>
+  <updated>2026-10-05T16:00:59+00:00</updated>
+  <media:group>
+   <media:title>Evenepoel-Ciccone, pourquoi pas ex aequo ? Seixas à l'assaut du Lombardie</media:title>
+   <media:thumbnail url="https://i1.ytimg.com/vi/AAAAAAAAAA1/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Description</media:description>
+   <media:community>
+    <media:starRating count="45" average="5.00" min="1" max="5"/>
+    <media:statistics views="4417"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:BBBBBBBBBB2</id>
+  <yt:videoId>BBBBBBBBBB2</yt:videoId>
+  <title>&quot;C'était éblouissant&quot; : Tom &amp; Jerry au Grand Prix de Bahreïn</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=BBBBBBBBBB2"/>
+  <published>2026-10-04T09:00:00+00:00</published>
+  <updated>2026-10-04T10:00:00+00:00</updated>
+  <media:group>
+   <media:title>&quot;C'était éblouissant&quot; : Tom &amp; Jerry au Grand Prix de Bahreïn</media:title>
+   <media:thumbnail url="https://i1.ytimg.com/vi/BBBBBBBBBB2/hqdefault.jpg" width="480" height="360"/>
+   <media:community>
+    <media:statistics views="120"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:CCCCCCCCCC3</id>
+  <yt:videoId>CCCCCCCCCC3</yt:videoId>
+  <title>VICTOIRE FRANÇAISE ! Noa Isidore remporte la Coppa Bernocchi #cycling #shorts</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=CCCCCCCCCC3"/>
+  <published>2026-10-03T08:00:00+00:00</published>
+  <updated>2026-10-03T08:30:00+00:00</updated>
+  <media:group>
+   <media:title>VICTOIRE FRANÇAISE ! Noa Isidore remporte la Coppa Bernocchi #cycling #shorts</media:title>
+   <media:thumbnail url="https://i1.ytimg.com/vi/CCCCCCCCCC3/hqdefault.jpg" width="480" height="360"/>
+   <media:community>
+    <media:statistics views="98765"/>
+   </media:community>
+  </media:group>
+ </entry>
+</feed>
