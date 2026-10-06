@@ -1,4 +1,4 @@
-defmodule Cinema.Repo.Migrations.CreateTraffic do
+defmodule Sortir.Core.Repo.Migrations.CreateTraffic do
   use Ecto.Migration
 
   def change do

@@ -1,9 +1,9 @@
-defmodule Cinema.MixProject do
+defmodule Sortir.Cinema.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :cinema,
+      app: :sortir,
       version: "0.1.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -28,7 +28,7 @@ defmodule Cinema.MixProject do
 
   def application do
     [
-      mod: {Cinema.Application, []},
+      mod: {Sortir.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -46,12 +46,12 @@ defmodule Cinema.MixProject do
     [
       # Web
       {:bandit, "~> 1.5"},
-      {:phoenix, "~> 1.8.9"},
+      {:phoenix, "~> 1.8"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.2.0"},
+      {:phoenix_live_view, "~> 1.2"},
       {:lazy_html, ">= 0.1.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
+      {:phoenix_live_dashboard, "~> 0.9"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
       {:heroicons,
@@ -69,7 +69,7 @@ defmodule Cinema.MixProject do
        compile: false,
        depth: 1},
       # Backend
-      {:dns_cluster, "~> 0.2.0"},
+      {:dns_cluster, "~> 0.3"},
       {:jason, "~> 1.2"},
       {:req, "~> 0.5"},
       {:ecto_sql, "~> 3.12"},
@@ -90,15 +90,15 @@ defmodule Cinema.MixProject do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind cinema", "esbuild cinema"],
+      "assets.build": ["compile", "tailwind sortir", "esbuild sortir"],
       # compile first: the Elixir compiler emits
       # _build/$MIX_ENV/phoenix-colocated/cinema/colocated.css, which app.css
       # imports. Without it tailwind fails to resolve that import on a clean
       # checkout (CI), even though a local _build makes it look fine.
       "assets.deploy": [
         "compile",
-        "tailwind cinema --minify",
-        "esbuild cinema --minify",
+        "tailwind sortir --minify",
+        "esbuild sortir --minify",
         "phx.digest"
       ],
       quality: [

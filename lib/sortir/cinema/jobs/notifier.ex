@@ -1,4 +1,4 @@
-defmodule Cinema.Jobs.Notifier do
+defmodule Sortir.Cinema.Jobs.Notifier do
   @moduledoc """
   Tells open pages when a city's schedule has changed.
 
@@ -16,8 +16,8 @@ defmodule Cinema.Jobs.Notifier do
   alias Phoenix.PubSub
 
   @handler __MODULE__
-  @pubsub Cinema.PubSub
-  @worker "Cinema.Jobs.FetchDay"
+  @pubsub Sortir.Core.PubSub
+  @worker "Sortir.Cinema.Jobs.FetchDay"
 
   # Long enough to absorb a burst, short enough that the board feels live.
   @window_ms 750

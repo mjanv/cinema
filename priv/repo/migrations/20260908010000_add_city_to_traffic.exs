@@ -1,4 +1,4 @@
-defmodule Cinema.Repo.Migrations.AddCityToTraffic do
+defmodule Sortir.Core.Repo.Migrations.AddCityToTraffic do
   use Ecto.Migration
 
   # `city` joins the primary key, and SQLite cannot alter one in place, so the

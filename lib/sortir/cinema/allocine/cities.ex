@@ -1,4 +1,4 @@
-defmodule Cinema.Allocine.Cities do
+defmodule Sortir.Cinema.Allocine.Cities do
   @moduledoc """
   Scrapes AlloCiné's cinema directory: which cities exist, and which theaters
   each one has.
@@ -8,7 +8,7 @@ defmodule Cinema.Allocine.Cities do
   layout change degrades to fewer results instead of an exception.
   """
 
-  alias Cinema.{City, Theater}
+  alias Sortir.Cinema.{City, Store, Theater}
 
   @index_url "https://www.allocine.fr/salle/"
   @city_url "https://www.allocine.fr/salle/cinema"
@@ -30,12 +30,12 @@ defmodule Cinema.Allocine.Cities do
   require Logger
 
   @doc false
-  def init_cache, do: Cinema.Store.open(@cache)
+  def init_cache, do: Store.open(@cache)
 
   @doc false
   def reset_cache do
     init_cache()
-    Cinema.Store.clear(@cache)
+    Store.clear(@cache)
   end
 
   # AlloCiné's own directory, captured. The city list is effectively static, so
@@ -237,7 +237,7 @@ defmodule Cinema.Allocine.Cities do
   defp city_url(slug, page), do: "#{@city_url}/#{slug}/?page=#{page}"
 
   defp cached(key, fun) do
-    case Cinema.Store.fetch(@cache, key, @ttl) do
+    case Store.fetch(@cache, key, @ttl) do
       {:ok, value} -> value
       :miss -> store(key, fun.())
     end
@@ -247,15 +247,13 @@ defmodule Cinema.Allocine.Cities do
   # on every page load is what earns a 429 in the first place. Backdating the
   # entry gives it the shorter failure TTL without a second timestamp field.
   defp store(key, []) do
-    Cinema.Store.put(@cache, key, [],
-      stored_at: System.os_time(:millisecond) - @ttl + @failure_ttl
-    )
+    Store.put(@cache, key, [], stored_at: System.os_time(:millisecond) - @ttl + @failure_ttl)
 
     []
   end
 
   defp store(key, value) do
-    Cinema.Store.put(@cache, key, value)
+    Store.put(@cache, key, value)
     value
   end
 

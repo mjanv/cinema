@@ -1,24 +1,25 @@
-defmodule Cinema.Release.Migrator do
+defmodule Sortir.Core.Release.Migrator do
   @moduledoc """
   Runs migrations at boot.
 
-  A release has no Mix, and the schema here is one table backing a cache, so a
-  separate deploy step would be ceremony for no benefit. Runs as a transient
-  task: it must complete before the caches are read, but it is not something to
-  keep alive.
-  """
+  A release ships without Mix, so migrations cannot be run by a mix task on the
+  server. The schema is small and additive, so migrating at boot is safer than
+  a separate deploy step that can be forgotten.
 
-  use Task, restart: :transient
+  Called synchronously from `Sortir.Core.Supervisor` before any child starts:
+  Oban verifies its tables on start and would race a migrator running as a
+  sibling process.
+  """
 
   require Logger
 
-  def start_link(opts), do: Task.start_link(__MODULE__, :run, [opts])
-
+  @doc "Migrates every configured repo. Returns `:ok` even when it could not."
+  @spec run(keyword()) :: :ok
   def run(_opts \\ []) do
     # Not in test: the pool there is the Ecto sandbox, and checking a
     # connection out at boot deadlocks before any test has claimed one.
     # test_helper.exs migrates once instead.
-    if Application.get_env(:cinema, :run_migrations_on_boot, true) do
+    if Application.get_env(:sortir, :run_migrations_on_boot, true) do
       migrate()
     end
 
@@ -26,7 +27,7 @@ defmodule Cinema.Release.Migrator do
   end
 
   defp migrate do
-    for repo <- Application.fetch_env!(:cinema, :ecto_repos) do
+    for repo <- Application.fetch_env!(:sortir, :ecto_repos) do
       # pool_size: 1 and a generous busy_timeout: SQLite allows one writer, and
       # the migrator's temporary connection otherwise races the supervised pool
       # for the file lock on boot.

@@ -1,4 +1,4 @@
-defmodule Cinema.Fixtures do
+defmodule Sortir.Cinema.Fixtures do
   @moduledoc """
   Loads captured AlloCiné API responses so parser tests run against real payloads.
   """

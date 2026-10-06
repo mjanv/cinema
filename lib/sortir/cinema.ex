@@ -1,17 +1,17 @@
-defmodule Cinema do
+defmodule Sortir.Cinema do
   @moduledoc """
   The public interface of the showtimes domain.
 
-  `CinemaWeb` talks to this module and nothing else: the aggregation, caching
+  `SortirWeb` talks to this module and nothing else: the aggregation, caching
   and source modules behind it are private. That keeps the web layer unaware of
-  where showtimes come from, so swapping or adding a `Cinema.Source` never
+  where showtimes come from, so swapping or adding a `Sortir.Cinema.Source` never
   reaches into a template.
 
-  Structs (`Cinema.Screening`, `Cinema.Theater`) are shared data and may be
+  Structs (`Sortir.Cinema.Screening`, `Sortir.Cinema.Theater`) are shared data and may be
   referenced directly; the modules that *operate* on them may not.
   """
 
-  alias Cinema.{City, Showtimes}
+  alias Sortir.Cinema.{City, Showtimes}
 
   @typedoc "A day's programme, grouped by cinema."
   @type day :: Showtimes.day()
@@ -63,9 +63,9 @@ defmodule Cinema do
   end
 
   defp default_city_slug,
-    do: Application.get_env(:cinema, Showtimes, [])[:default_city] || "grenoble"
+    do: Application.get_env(:sortir, Showtimes, [])[:default_city] || "grenoble"
 
-  defp source, do: Application.get_env(:cinema, Showtimes, [])[:source] || Cinema.Allocine
+  defp source, do: Application.get_env(:sortir, Showtimes, [])[:source] || Sortir.Cinema.Allocine
 
   @doc """
   Regroups one day around films, listing every cinema showing each.
@@ -85,7 +85,7 @@ defmodule Cinema do
 
   @doc "Short commit SHA of the running build."
   @spec commit() :: String.t()
-  defdelegate commit(), to: Cinema.Version
+  defdelegate commit(), to: Sortir.Core.Version
 
   @doc """
   One film's whole run across the schedule: every day it plays, and where.

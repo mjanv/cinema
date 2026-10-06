@@ -1,4 +1,4 @@
-defmodule Cinema.City do
+defmodule Sortir.Cinema.City do
   @moduledoc """
   A city you can browse showtimes for.
 
@@ -8,7 +8,7 @@ defmodule Cinema.City do
       It appears in URLs and is what users bookmark.
     * `external_id` — the source's own key (`ville-98857` for AlloCiné).
       Internal. It must never reach a URL or a template: leaking it would tie
-      every bookmark to one scraper, so changing or adding a `Cinema.Source`
+      every bookmark to one scraper, so changing or adding a `Sortir.Cinema.Source`
       would break them all.
   """
 

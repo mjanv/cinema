@@ -1,11 +1,11 @@
-defmodule Cinema.StubSource do
+defmodule Sortir.Cinema.StubSource do
   @moduledoc """
-  Deterministic `Cinema.Source` for tests, so nothing hits AlloCiné.
+  Deterministic `Sortir.Cinema.Source` for tests, so nothing hits AlloCiné.
   """
 
-  @behaviour Cinema.Source
+  @behaviour Sortir.Cinema.Source
 
-  alias Cinema.{City, Screening, Theater}
+  alias Sortir.Cinema.{City, Screening, Theater}
 
   @theater %Theater{external_id: "T1", name: "Cinéma Test", city: "Grenoble"}
 
@@ -14,16 +14,16 @@ defmodule Cinema.StubSource do
     City.new("ville-113315", "Lyon")
   ]
 
-  @impl Cinema.Source
+  @impl Sortir.Cinema.Source
   def cities, do: @cities
 
-  @impl Cinema.Source
+  @impl Sortir.Cinema.Source
   def theaters(%City{slug: "lyon"}),
     do: [%Theater{external_id: "T2", name: "Cinéma Lyonnais", city: "Lyon"}]
 
   def theaters(%City{}), do: [@theater]
 
-  @impl Cinema.Source
+  @impl Sortir.Cinema.Source
   def fetch_day(%Theater{external_id: "T2"}, date) do
     {:ok, [screening(date, ~T[18:00:00], "Film Lyonnais", :vf, "T2", "Cinéma Lyonnais")]}
   end

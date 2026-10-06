@@ -1,4 +1,4 @@
-defmodule Cinema.Screening do
+defmodule Sortir.Cinema.Screening do
   @moduledoc """
   A single projection of one movie, at one theater, at one time.
 

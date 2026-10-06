@@ -1,4 +1,4 @@
-defmodule Cinema.Traffic.Hit do
+defmodule Sortir.Cinema.Traffic.Hit do
   @moduledoc """
   How many times one path, showing one city, was viewed during one hour.
 

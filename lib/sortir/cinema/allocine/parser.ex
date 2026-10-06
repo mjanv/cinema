@@ -1,12 +1,12 @@
-defmodule Cinema.Allocine.Parser do
+defmodule Sortir.Cinema.Allocine.Parser do
   @moduledoc """
-  Turns an AlloCiné showtimes payload into a flat list of `Cinema.Screening`.
+  Turns an AlloCiné showtimes payload into a flat list of `Sortir.Cinema.Screening`.
 
   Pure: no network. Every field AlloCiné may omit is treated as optional, so a
   missing poster or booking link degrades the row instead of failing the page.
   """
 
-  alias Cinema.Screening
+  alias Sortir.Cinema.Screening
 
   @spec parse(map(), String.t()) :: [Screening.t()]
   def parse(%{"results" => results}, theater_id) when is_list(results) do

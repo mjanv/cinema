@@ -1,4 +1,4 @@
-defmodule Cinema.Cache.Entry do
+defmodule Sortir.Cinema.Cache.Entry do
   @moduledoc """
   One cached value.
 

@@ -1,6 +1,6 @@
-defmodule Cinema.Theater do
+defmodule Sortir.Cinema.Theater do
   @moduledoc """
-  A cinema, as exposed by some `Cinema.Source`.
+  A cinema, as exposed by some `Sortir.Cinema.Source`.
 
   `external_id` is opaque and only meaningful to the source that issued it
   (an AlloCiné theater code today), which keeps the behaviour source-agnostic.

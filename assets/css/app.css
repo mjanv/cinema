@@ -844,3 +844,64 @@ a.chip:hover { border-color: var(--paper); }
 
 .traffic-foot a { color: var(--slate); text-decoration: none; }
 .traffic-foot a:hover { color: var(--paper); }
+
+/* Agenda: the same board language, one line of practical detail per entry. */
+.agenda-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.45rem 0 0;
+}
+
+.agenda-meta .town { margin-left: 0; }
+
+/* Sold out and cancelled are facts about whether you can go, so they read
+   like the past-screening chips rather than shouting. */
+.chip.is-sold-out,
+.chip.is-cancelled {
+  color: var(--slate);
+  border-color: color-mix(in srgb, var(--rule) 60%, transparent);
+  text-decoration: line-through;
+}
+
+/* The nav doubles as the link between the two boards. */
+.controls a.version { text-decoration: none; }
+.controls a.version:hover { color: var(--paper); border-color: var(--slate); }
+
+/* Rows on the venues page. Named .place, not .venue: .venue is already the
+   cinema inside a film group on the showtimes board, and reusing it silently
+   restyled that view.
+
+   No poster, so no .movie grid — that grid reserves a 5rem first column and
+   would indent every row by the width of an image that is never there. */
+.place {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
+}
+
+.place:last-child { border-bottom: 0; }
+
+.place-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.place-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.place-name a { color: inherit; text-decoration: none; }
+.place-name a:hover { text-decoration: underline; }
+
+/* The counts are the reason to scan this page: keep them aligned right and
+   from wrapping mid-number. */
+.place-count {
+  color: var(--slate);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}

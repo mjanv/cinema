@@ -1,12 +1,12 @@
-defmodule CinemaWeb do
+defmodule SortirWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.
 
   This can be used in your application as:
 
-      use CinemaWeb, :controller
-      use CinemaWeb, :html
+      use SortirWeb, :controller
+      use SortirWeb, :html
 
   The definitions below will be executed for every controller,
   component, etc, so keep them short and clean, focused
@@ -80,11 +80,11 @@ defmodule CinemaWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components
-      import CinemaWeb.CoreComponents
+      import SortirWeb.CoreComponents
 
       # Common modules used in templates
-      alias CinemaWeb.Layouts
       alias Phoenix.LiveView.JS
+      alias SortirWeb.Layouts
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
@@ -94,9 +94,9 @@ defmodule CinemaWeb do
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
-        endpoint: CinemaWeb.Endpoint,
-        router: CinemaWeb.Router,
-        statics: CinemaWeb.static_paths()
+        endpoint: SortirWeb.Endpoint,
+        router: SortirWeb.Router,
+        statics: SortirWeb.static_paths()
     end
   end
 

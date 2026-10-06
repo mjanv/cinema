@@ -1,4 +1,4 @@
-defmodule Cinema.Store do
+defmodule Sortir.Cinema.Store do
   @moduledoc """
   A TTL cache on SQLite, so it survives a redeploy.
 
@@ -19,8 +19,8 @@ defmodule Cinema.Store do
 
   require Logger
 
-  alias Cinema.Cache.Entry
-  alias Cinema.Repo
+  alias Sortir.Cinema.Cache.Entry
+  alias Sortir.Core.Repo
 
   @doc """
   Kept for symmetry with the previous ETS/DETS stores; the Repo owns the

@@ -1,14 +1,14 @@
 import Config
 
 if System.get_env("PHX_SERVER") do
-  config :cinema, CinemaWeb.Endpoint, server: true
+  config :sortir, SortirWeb.Endpoint, server: true
 end
 
-config :cinema, CinemaWeb.Endpoint,
+config :sortir, SortirWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 if config_env() == :dev do
-  config :cinema, CinemaWeb.Endpoint,
+  config :sortir, SortirWeb.Endpoint,
     live_reload: [
       web_console_logger: true,
       patterns: [
@@ -29,25 +29,25 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
-  config :cinema, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :sortir, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   # On disk so a redeploy resumes with a warm cache instead of refetching every
   # city at once, which is what trips AlloCiné's rate limit. The deploy's rsync
   # excludes this directory from --delete. Read at runtime so the path can be
   # overridden without rebuilding the release.
-  config :cinema, Cinema.Repo,
-    database: System.get_env("DATABASE_PATH") || "/opt/cinema/cache/cinema.db",
+  config :sortir, Sortir.Core.Repo,
+    database: System.get_env("DATABASE_PATH") || "/opt/sortir/cache/sortir.db",
     journal_mode: :wal,
     busy_timeout: 5_000,
     pool_size: 5
 
   # Optional: with no OPERATOR_PASSWORD the dashboard is open to anyone who
   # finds the path, with one it asks for it.
-  config :cinema, :operator,
+  config :sortir, :operator,
     username: System.get_env("OPERATOR_USER") || "cinema",
     password: System.get_env("OPERATOR_PASSWORD")
 
-  config :cinema, CinemaWeb.Endpoint,
+  config :sortir, SortirWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
       ip: {127, 0, 0, 1},

@@ -1,4 +1,4 @@
-defmodule Cinema.Jobs.FetchDay do
+defmodule Sortir.Cinema.Jobs.FetchDay do
   @moduledoc """
   Fetches one theater's programme for one date.
 
@@ -20,7 +20,7 @@ defmodule Cinema.Jobs.FetchDay do
       states: Oban.Job.states() -- [:completed, :discarded, :cancelled]
     ]
 
-  alias Cinema.{City, Store}
+  alias Sortir.Cinema.{City, Store}
 
   require Logger
 
@@ -44,7 +44,7 @@ defmodule Cinema.Jobs.FetchDay do
   @spec enqueue(City.t(), keyword()) :: {:ok, non_neg_integer()}
   def enqueue(%City{} = city, opts \\ []) do
     days = Keyword.get(opts, :days, 7)
-    today = Keyword.get(opts, :today, Cinema.today())
+    today = Keyword.get(opts, :today, Sortir.Cinema.today())
     source = source()
 
     # Day-major, same reason as enqueue_missing/4.
@@ -100,7 +100,7 @@ defmodule Cinema.Jobs.FetchDay do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"city_slug" => slug, "theater_id" => id, "date" => date}}) do
     with {:ok, date} <- Date.from_iso8601(date),
-         %City{} = city <- Cinema.find_city(slug),
+         %City{} = city <- Sortir.Cinema.find_city(slug),
          %{} = theater <- find_theater(city, id) do
       fetch_and_store(city, theater, date)
     else
@@ -141,7 +141,9 @@ defmodule Cinema.Jobs.FetchDay do
 
   defp key(slug, theater_id, date), do: "#{slug}/#{theater_id}/#{Date.to_iso8601(date)}"
 
-  defp source, do: Application.get_env(:cinema, Cinema.Showtimes, [])[:source] || Cinema.Allocine
+  defp source,
+    do:
+      Application.get_env(:sortir, Sortir.Cinema.Showtimes, [])[:source] || Sortir.Cinema.Allocine
 
-  defp pace_ms, do: Application.get_env(:cinema, __MODULE__, [])[:pace_ms] || @pace_ms
+  defp pace_ms, do: Application.get_env(:sortir, __MODULE__, [])[:pace_ms] || @pace_ms
 end

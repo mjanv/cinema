@@ -1,14 +1,15 @@
-defmodule Cinema.Showtimes do
+defmodule Sortir.Cinema.Showtimes do
   @moduledoc """
-  Aggregates every configured `Cinema.Source` into a day → theater → movie tree,
+  Aggregates every configured `Sortir.Cinema.Source` into a day → theater → movie tree,
   behind a lazy TTL cache.
 
   Screenings are returned exactly as the source reports them; showings that have
   already started are deliberately kept, so the page reflects the full day.
   """
 
-  alias Cinema.{City, Screening, Theater}
-  alias Cinema.Jobs.FetchDay
+  alias Sortir.Cinema.{City, Screening, Store, Theater}
+  alias Sortir.Cinema.Jobs.FetchDay
+  alias Sortir.Core.Clock
 
   @cache __MODULE__.Cache
   @ttl :timer.minutes(30)
@@ -90,11 +91,11 @@ defmodule Cinema.Showtimes do
   early in summer and hide the late showings.
   """
   @spec today(DateTime.t()) :: Date.t()
-  def today(now \\ DateTime.utc_now()), do: now |> local() |> DateTime.to_date()
+  defdelegate today(now \\ DateTime.utc_now()), to: Clock
 
   @doc "The current time in Grenoble, for reading the board against."
   @spec now(DateTime.t()) :: DateTime.t()
-  def now(at \\ DateTime.utc_now()), do: local(at)
+  defdelegate now(at \\ DateTime.utc_now()), to: Clock
 
   # How long a started screening stays worth showing: you may still be in it,
   # and a film that began 10 minutes ago is not a reason to skip the whole day.
@@ -133,13 +134,6 @@ defmodule Cinema.Showtimes do
     end
   end
 
-  defp local(at) do
-    case DateTime.shift_zone(at, timezone()) do
-      {:ok, local} -> local
-      {:error, _no_tzdata} -> at
-    end
-  end
-
   # A source outage must not evict a good schedule: an empty fetch keeps the
   # previous days and only marks them stale.
   defp reload(city, today, days) do
@@ -162,7 +156,7 @@ defmodule Cinema.Showtimes do
   # the rest, so a cold city returns partial data immediately and fills in
   # rather than blocking on hundreds of requests.
   defp load(city, today, days) do
-    source = config(:source, Cinema.Allocine)
+    source = config(:source, Sortir.Cinema.Allocine)
     theaters = source.theaters(city)
 
     # Only queue what is actually missing. Enqueueing unconditionally made this
@@ -190,7 +184,7 @@ defmodule Cinema.Showtimes do
   @doc """
   Pure aggregation: fans out `fetch` over theaters × dates and shapes the tree.
 
-  `fetch` receives a `Cinema.Theater` and a `Date` and returns
+  `fetch` receives a `Sortir.Cinema.Theater` and a `Date` and returns
   `{:ok, screenings}` or `{:error, reason}`; a failing theater is simply absent.
   """
   @spec build(
@@ -376,12 +370,12 @@ defmodule Cinema.Showtimes do
   # --- cache -------------------------------------------------------------
 
   @doc false
-  def init_cache, do: Cinema.Store.open(@cache)
+  def init_cache, do: Store.open(@cache)
 
   @doc false
   def reset_cache do
     init_cache()
-    Cinema.Store.clear(@cache)
+    Store.clear(@cache)
   end
 
   # `:fresh` respects the TTL; `:any` returns the last schedule whatever its age,
@@ -392,14 +386,14 @@ defmodule Cinema.Showtimes do
     # A stale entry is retried sooner: an outage should recover quickly without
     # turning every page load into a request storm.
     ttl =
-      case Cinema.Store.fetch(key_table(), key, :infinity) do
+      case Store.fetch(key_table(), key, :infinity) do
         {:ok, %{stale?: true}} -> @stale_retry_ms
         _otherwise -> config(:cache_ttl_ms, @ttl)
       end
 
     ttl = if mode == :any, do: :infinity, else: ttl
 
-    Cinema.Store.fetch(key_table(), key, ttl)
+    Store.fetch(key_table(), key, ttl)
   end
 
   defp key_table, do: @cache
@@ -413,7 +407,7 @@ defmodule Cinema.Showtimes do
       fetched_at: if(stale?, do: last_fetched_at(city), else: DateTime.utc_now())
     }
 
-    Cinema.Store.put(@cache, cache_key(city), entry)
+    Store.put(@cache, cache_key(city), entry)
     entry
   end
 
@@ -428,7 +422,5 @@ defmodule Cinema.Showtimes do
   # city's schedule from cache.
   defp cache_key(%City{slug: slug}), do: {:days, slug}
 
-  defp timezone, do: config(:timezone, "Europe/Paris")
-
-  defp config(key, default), do: Application.get_env(:cinema, __MODULE__, [])[key] || default
+  defp config(key, default), do: Application.get_env(:sortir, __MODULE__, [])[key] || default
 end

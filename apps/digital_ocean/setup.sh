@@ -6,7 +6,7 @@
 # firewall are its setup's responsibility, not this one's.
 set -euo pipefail
 
-APP=cinema
+APP=sortir
 APP_DIR="/opt/${APP}"
 APP_USER="${APP}"
 
@@ -48,8 +48,8 @@ mkdir -p "${TRAEFIK_DIR}"
 # re-reads the moment the file appears, so a root-owned file in between logs a
 # permission error and is skipped until the next change.
 install -m 0644 -o traefik -g traefik \
-  "$(dirname "$0")/traefik/cinema.yml" "${TRAEFIK_DIR}/cinema.yml"
-echo "    installed ${TRAEFIK_DIR}/cinema.yml (watched; no restart needed)"
+  "$(dirname "$0")/traefik/sortir.yml" "${TRAEFIK_DIR}/sortir.yml"
+echo "    installed ${TRAEFIK_DIR}/sortir.yml (watched; no restart needed)"
 
 cat <<'NEXT'
 

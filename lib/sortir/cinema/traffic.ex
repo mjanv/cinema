@@ -1,4 +1,4 @@
-defmodule Cinema.Traffic do
+defmodule Sortir.Cinema.Traffic do
   @moduledoc """
   A hit counter: one row per hour, per page, per city, on the SQLite the app
   already has.
@@ -22,7 +22,7 @@ defmodule Cinema.Traffic do
   agent. The table cannot say who came, only how often a board was looked at,
   which is all "is anyone using this?" needs.
 
-  Writes degrade to a no-op, like `Cinema.Store`: a locked or unwritable
+  Writes degrade to a no-op, like `Sortir.Cinema.Store`: a locked or unwritable
   database must cost a statistic, never a page.
   """
 
@@ -30,8 +30,8 @@ defmodule Cinema.Traffic do
 
   require Logger
 
-  alias Cinema.Repo
-  alias Cinema.Traffic.Hit
+  alias Sortir.Cinema.Traffic.Hit
+  alias Sortir.Core.Repo
 
   @typedoc "A point in a series, or a row in a breakdown: a label and its views."
   @type point :: {String.t(), non_neg_integer()}

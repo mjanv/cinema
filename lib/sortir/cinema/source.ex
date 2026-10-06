@@ -1,4 +1,4 @@
-defmodule Cinema.Source do
+defmodule Sortir.Cinema.Source do
   @moduledoc """
   A provider of showtimes.
 
@@ -11,7 +11,7 @@ defmodule Cinema.Source do
   so one failing site cannot take down the whole page.
   """
 
-  alias Cinema.{City, Screening, Theater}
+  alias Sortir.Cinema.{City, Screening, Theater}
 
   @doc "Cities this source can serve, in display order."
   @callback cities() :: [City.t()]

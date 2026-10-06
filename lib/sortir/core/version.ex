@@ -1,4 +1,4 @@
-defmodule Cinema.Version do
+defmodule Sortir.Core.Version do
   @moduledoc """
   Which build is running.
 

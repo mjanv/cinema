@@ -66,11 +66,11 @@ jobs:
 
       - name: Build release
         run: |
-          # Cinema.Version bakes GITHUB_SHA in at compile time, and the build
+          # Core.Version bakes GITHUB_SHA in at compile time, and the build
           # cache is keyed on lib/**/*.ex. A commit touching only assets would
           # restore a cached module and report the previous SHA — exactly when
           # you are checking the footer to confirm the deploy landed.
-          touch lib/cinema/version.ex
+          touch lib/sortir/cinema/version.ex
           mix compile
           mix release --overwrite --quiet
         env:
@@ -100,31 +100,31 @@ jobs:
           EOF
         env:
           PHX_HOST: cinema.premiere-ecoute.fr
-          SECRET_KEY_BASE: ${{ secrets.CINEMA_SECRET_KEY_BASE }}
-          OPERATOR_PASSWORD: ${{ secrets.CINEMA_OPERATOR_PASSWORD }}
+          SECRET_KEY_BASE: ${{ secrets.SORTIR_SECRET_KEY_BASE }}
+          OPERATOR_PASSWORD: ${{ secrets.SORTIR_OPERATOR_PASSWORD }}
 
       - name: Backup current release
         run: |
           ssh root@${{ vars.DO_HOST }} '
-            rm -rf /opt/cinema-backup
-            if [ -d /opt/cinema ]; then cp -a /opt/cinema /opt/cinema-backup; fi
+            rm -rf /opt/sortir-backup
+            if [ -d /opt/sortir ]; then cp -a /opt/sortir /opt/sortir-backup; fi
           '
 
       - name: Deploy release to server
         run: |
           # Keep .env and the DETS cache: --delete would wipe them, and losing
           # the cache on every deploy is exactly what persisting it avoids.
-          rsync -avzq --delete --exclude='.env' --exclude='cache' _build/prod/rel/cinema/ root@${{ vars.DO_HOST }}:/opt/cinema/
-          scp .env.production root@${{ vars.DO_HOST }}:/opt/cinema/.env
+          rsync -avzq --delete --exclude='.env' --exclude='cache' _build/prod/rel/sortir/ root@${{ vars.DO_HOST }}:/opt/sortir/
+          scp .env.production root@${{ vars.DO_HOST }}:/opt/sortir/.env
           # Cinema owns exactly this one file in the shared Traefik directory.
           # Stage then install as traefik: the directory is watched, so a
           # root-owned file even briefly makes Traefik skip it.
-          scp apps/digital_ocean/traefik/cinema.yml root@${{ vars.DO_HOST }}:/tmp/cinema.yml
-          ssh root@${{ vars.DO_HOST }} 'install -m 0644 -o traefik -g traefik /tmp/cinema.yml /opt/traefik/dynamic/cinema.yml && rm -f /tmp/cinema.yml'
+          scp apps/digital_ocean/traefik/sortir.yml root@${{ vars.DO_HOST }}:/tmp/sortir.yml
+          ssh root@${{ vars.DO_HOST }} 'install -m 0644 -o traefik -g traefik /tmp/sortir.yml /opt/traefik/dynamic/sortir.yml && rm -f /tmp/sortir.yml'
           ssh root@${{ vars.DO_HOST }} '
-            chown -R cinema:cinema /opt/cinema
-            chmod 600 /opt/cinema/.env
-            find /opt/cinema \( -path "*/bin/*" -o -path "*/releases/*/elixir" -o -path "*/releases/*/iex" -o -name "*.so" \) -type f -exec chmod +x {} \;
+            chown -R sortir:sortir /opt/sortir
+            chmod 600 /opt/sortir/.env
+            find /opt/sortir \( -path "*/bin/*" -o -path "*/releases/*/elixir" -o -path "*/releases/*/iex" -o -name "*.so" \) -type f -exec chmod +x {} \;
           '
 
       - name: Remove local secrets file
@@ -134,9 +134,9 @@ jobs:
       - name: Restart application
         run: |
           ssh root@${{ vars.DO_HOST }} '
-            systemctl restart cinema
-            systemctl status cinema --no-pager
-            journalctl -u cinema -n 50 --no-pager
+            systemctl restart sortir
+            systemctl status sortir --no-pager
+            journalctl -u sortir -n 50 --no-pager
           '
 
       - name: Health check
@@ -156,12 +156,12 @@ jobs:
         if: failure() && steps.health_check.outcome == 'failure'
         run: |
           ssh root@${{ vars.DO_HOST }} '
-            if [ -d /opt/cinema-backup ]; then
-              rm -rf /opt/cinema
-              mv /opt/cinema-backup /opt/cinema
-              chown -R cinema:cinema /opt/cinema
-              systemctl restart cinema
-              systemctl status cinema --no-pager
+            if [ -d /opt/sortir-backup ]; then
+              rm -rf /opt/sortir
+              mv /opt/sortir-backup /opt/sortir
+              chown -R sortir:sortir /opt/sortir
+              systemctl restart sortir
+              systemctl status sortir --no-pager
             else
               echo "No backup to roll back to (first deploy)."
             fi
@@ -169,4 +169,4 @@ jobs:
 
       - name: Clean up backup after successful deploy
         if: success()
-        run: ssh root@${{ vars.DO_HOST }} 'rm -rf /opt/cinema-backup'
+        run: ssh root@${{ vars.DO_HOST }} 'rm -rf /opt/sortir-backup'

@@ -1,6 +1,6 @@
 import Config
 
-config :cinema, CinemaWeb.Endpoint,
+config :sortir, SortirWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "j+uxDXOrq2TCv7cJ3F6qZ4RJc/Cq2AD0fLbuSs2Z/OyaXF7ypExiN1R0UEJNAy/H",
   server: false
@@ -15,26 +15,29 @@ config :phoenix_live_view,
 config :phoenix,
   sort_verified_routes_query_params: true
 
-config :cinema, Cinema.Showtimes,
-  source: Cinema.StubSource,
+config :sortir, Sortir.Cinema.Showtimes,
+  source: Sortir.Cinema.StubSource,
   days: 3,
   cache_ttl_ms: 0
 
-config :cinema, Cinema.Repo,
-  database: Path.expand("../priv/cinema_test.db", __DIR__),
+config :sortir, Sortir.Core.Repo,
+  database: Path.expand("../priv/sortir_test.db", __DIR__),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 5
 
 # Jobs run inline in tests: Oban.Testing asserts on what was enqueued, and a
 # running queue would race with those assertions.
-config :cinema, Oban, testing: :manual
+config :sortir, Oban, testing: :manual
 
 # No pacing in tests: the stub source makes no network calls.
-config :cinema, Cinema.Jobs.FetchDay, pace_ms: 0
+config :sortir, Sortir.Cinema.Jobs.FetchDay, pace_ms: 0
 
 # test_helper.exs migrates once; booting into the sandbox pool would deadlock.
-config :cinema, run_migrations_on_boot: false
+config :sortir, run_migrations_on_boot: false
 
 # Only so the locked path is exercised; the tests that want the open one
 # unset this for themselves.
-config :cinema, :operator, username: "cinema", password: "cinema"
+config :sortir, :operator, username: "cinema", password: "cinema"
+
+# No pacing in tests: sources are stubbed and make no network calls.
+config :sortir, Sortir.Agenda.Sources.BelleElectrique, pace_ms: 0

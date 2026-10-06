@@ -11,9 +11,9 @@
 
 http:
   routers:
-    cinema:
+    sortir:
       rule: "Host(`cinema.premiere-ecoute.fr`)"
-      service: cinema
+      service: sortir
       entryPoints:
         - websecure
       tls:
@@ -24,7 +24,7 @@ http:
         options: no-h2
 
   services:
-    cinema:
+    sortir:
       loadBalancer:
         servers:
           - url: "http://localhost:4001"

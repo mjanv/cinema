@@ -1,9 +1,13 @@
-defmodule Cinema.Supervisor do
-  @moduledoc false
+defmodule Sortir.Cinema.Supervisor do
+  @moduledoc """
+  The showtimes domain's own processes.
+
+  Starts after `Sortir.Core.Supervisor` and assumes the repo, Oban and PubSub
+  are already running: the warmer enqueues jobs at boot and the notifier
+  broadcasts as they complete.
+  """
 
   use Supervisor
-
-  alias Cinema.Release.Migrator
 
   def start_link(args \\ []) do
     Supervisor.start_link(__MODULE__, args, name: __MODULE__)
@@ -11,16 +15,11 @@ defmodule Cinema.Supervisor do
 
   @impl Supervisor
   def init(_args) do
-    Migrator.run()
-
     children = [
-      {Phoenix.PubSub, name: Cinema.PubSub},
-      Cinema.Repo,
-      {Oban, Application.fetch_env!(:cinema, Oban)},
-      Cinema.Jobs.Notifier,
-      Cinema.Warmer
+      Sortir.Cinema.Jobs.Notifier,
+      Sortir.Cinema.Warmer
     ]
 
-    Supervisor.init(children, strategy: :rest_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end

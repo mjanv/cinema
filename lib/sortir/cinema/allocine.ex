@@ -1,18 +1,18 @@
-defmodule Cinema.Allocine do
+defmodule Sortir.Cinema.Allocine do
   @moduledoc """
-  `Cinema.Source` backed by AlloCiné's internal showtimes endpoint:
+  `Sortir.Cinema.Source` backed by AlloCiné's internal showtimes endpoint:
 
       /_/showtimes/theater-{id}/d-{YYYY-MM-DD}/p-{page}/
 
   This endpoint is undocumented and may change without notice, which is why
-  parsing is isolated in `Cinema.Allocine.Parser` and covered by tests against
+  parsing is isolated in `Sortir.Cinema.Allocine.Parser` and covered by tests against
   captured responses.
   """
 
-  @behaviour Cinema.Source
+  @behaviour Sortir.Cinema.Source
 
-  alias Cinema.Allocine.{Cities, Parser}
-  alias Cinema.Theater
+  alias Sortir.Cinema.Allocine.{Cities, Parser}
+  alias Sortir.Cinema.Theater
 
   require Logger
 
@@ -22,17 +22,17 @@ defmodule Cinema.Allocine do
 
   @max_pages 10
 
-  @impl Cinema.Source
+  @impl Sortir.Cinema.Source
   def cities, do: Cities.list()
 
-  @impl Cinema.Source
-  def theaters(%Cinema.City{} = city), do: Cities.theaters(city)
+  @impl Sortir.Cinema.Source
+  def theaters(%Sortir.Cinema.City{} = city), do: Cities.theaters(city)
 
-  @impl Cinema.Source
+  @impl Sortir.Cinema.Source
   def fetch_day(theater, date), do: fetch_day(theater, date, [])
 
   @spec fetch_day(Theater.t(), Date.t(), keyword()) ::
-          {:ok, [Cinema.Screening.t()]} | {:error, term()}
+          {:ok, [Sortir.Cinema.Screening.t()]} | {:error, term()}
   def fetch_day(%Theater{} = theater, %Date{} = date, opts) do
     fetch = Keyword.get(opts, :fetch, &get_json/1)
     collect_pages(theater, date, fetch, 1, [])
