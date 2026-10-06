@@ -70,7 +70,7 @@ jobs:
           # cache is keyed on lib/**/*.ex. A commit touching only assets would
           # restore a cached module and report the previous SHA — exactly when
           # you are checking the footer to confirm the deploy landed.
-          touch lib/sortir/cinema/version.ex
+          touch lib/sortir/core/version.ex
           mix compile
           mix release --overwrite --quiet
         env:

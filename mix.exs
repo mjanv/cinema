@@ -92,7 +92,7 @@ defmodule Sortir.Cinema.MixProject do
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind sortir", "esbuild sortir"],
       # compile first: the Elixir compiler emits
-      # _build/$MIX_ENV/phoenix-colocated/cinema/colocated.css, which app.css
+      # _build/$MIX_ENV/phoenix-colocated/sortir/colocated.css, which app.css
       # imports. Without it tailwind fails to resolve that import on a clean
       # checkout (CI), even though a local _build makes it look fine.
       "assets.deploy": [

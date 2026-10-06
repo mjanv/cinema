@@ -13,8 +13,8 @@ if config_env() == :dev do
       web_console_logger: true,
       patterns: [
         ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$"E,
-        ~r"lib/cinema_web/router\.ex$"E,
-        ~r"lib/cinema_web/(controllers|live|components)/.*\.(ex|heex)$"E
+        ~r"lib/sortir_web/router\.ex$"E,
+        ~r"lib/sortir_web/(controllers|live|components)/.*\.(ex|heex)$"E
       ]
     ]
 end
